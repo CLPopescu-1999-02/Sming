@@ -8,39 +8,32 @@
  *
  ****/
 
-#ifndef _SMING_CORE_HTTP_MPARTSTREAM_H_
-#define _SMING_CORE_HTTP_MPARTSTREAM_H_
+#ifndef _SMING_CORE_DATA_BASE64STREAM_H_
+#define _SMING_CORE_DATA_BASE64STREAM_H_
 
-#include "../HttpCommon.h"
-#include "../HttpResponse.h"
-#include "../HttpRequest.h"
-#include "../../../Delegate.h"
+#include "../../../CircularBuffer.h"
+
+#undef max
+#undef min
+#include <functional>
 
 /**
- * @brief      HTTP multipart stream class
- * @ingroup    stream http
+ * @brief      Base64 Stream
+ * @ingroup    stream data
  *
  *  @{
 */
 
-typedef struct {
-	HttpHeaders* headers = NULL;
-	ReadWriteStream* stream  = NULL;
-} HttpPartResult;
+typedef std::function<uint8_t*(uint8_t* data, int length, int* outputLength)> StreamTransformerCallback;
 
-typedef Delegate <HttpPartResult()> HttpPartProducerDelegate;
-
-class HttpMultipartStream: public ReadWriteStream
+class StreamTransformer: public ReadWriteStream
 {
 public:
-	HttpMultipartStream(HttpPartProducerDelegate delegate);
-	virtual ~HttpMultipartStream();
+	StreamTransformer(ReadWriteStream *stream, StreamTransformerCallback callback, size_t readSize = 1024);
+	virtual ~StreamTransformer();
 
 	//Use base class documentation
-	virtual StreamType getStreamType() {
-		// TODO: fix this...
-		return stream->getStreamType();
-	}
+	virtual StreamType getStreamType() { return stream->getStreamType(); }
 
 	/**
 	 * @brief Return the total length of the stream
@@ -70,23 +63,14 @@ public:
 	//Use base class documentation
 	virtual bool isFinished();
 
-	/**
-	 * @brief Returns the generated boundary
-	 *
-	 * @retval const char*
-	 */
-	const char* getBoundary();
-
 private:
-	HttpPartProducerDelegate producer;
-
 	ReadWriteStream *stream = NULL;
-	ReadWriteStream *nextStream = NULL;
-
-	char boundary[16] = {0};
-
-	bool finished = false;
+	CircularBuffer *tempStream = NULL;
+	StreamTransformerCallback callback = nullptr;
+	size_t readSize;
 };
 
+uint8_t* base64StreamTransformer(uint8_t* data, int length, int* outputLength);
+
 /** @} */
-#endif /* _SMING_CORE_HTTP_MPARTSTREAM_H_ */
+#endif /* _SMING_CORE_DATA_BASE64STREAM_H_ */
