@@ -15,7 +15,6 @@ HttpMultipartStream::HttpMultipartStream(HttpPartProducerDelegate delegate): pro
 
 }
 
-
 HttpMultipartStream::~HttpMultipartStream()
 {
 	delete stream;
@@ -50,30 +49,39 @@ uint16_t HttpMultipartStream::readMemoryBlock(char* data, int bufSize)
 
 	if(stream == NULL) {
 		HttpPartResult result = producer();
+
 		stream = new MemoryDataStream();
 
-		String line = String("\r\n--") + getBoundary() + String("\r\n");
-		stream->write((uint8_t *)line.c_str(), line.length());
-		if(result.headers != NULL) {
+		if(result.stream == NULL) { // Sending a result without stream is the way to stop the "production"
+			String line = String("\r\n--") + getBoundary() + String("--\r\n");
+			stream->write((uint8_t *)line.c_str(), line.length());
 
-			if(!result.headers->contains("Content-Length") ) {
-				if(result.stream != NULL && result.stream->available() > -1) {
-					(*result.headers)["Content-Length"] = result.stream->available();
-				}
-			}
-
-			for (int i = 0; i < result.headers->count(); i++) {
-				line = result.headers->keyAt(i) + ": " + result.headers->valueAt(i) + "\r\n";
-				stream->write((uint8_t *)line.c_str(), line.length());
-			}
-
-			delete result.headers;
-			result.headers = NULL;
+			finished = true;
 		}
-		line = "\r\n";
-		stream->write((uint8_t *)line.c_str(), line.length());
+		else {
+			String line = String("\r\n--") + getBoundary() + String("\r\n");
+			stream->write((uint8_t *)line.c_str(), line.length());
+			if(result.headers != NULL) {
 
-		nextStream = result.stream;
+				if(!result.headers->contains("Content-Length") ) {
+					if(result.stream != NULL && result.stream->available() > -1) {
+						(*result.headers)["Content-Length"] = result.stream->available();
+					}
+				}
+
+				for (int i = 0; i < result.headers->count(); i++) {
+					line = result.headers->keyAt(i) + ": " + result.headers->valueAt(i) + "\r\n";
+					stream->write((uint8_t *)line.c_str(), line.length());
+				}
+
+				delete result.headers;
+				result.headers = NULL;
+			}
+			line = "\r\n";
+			stream->write((uint8_t *)line.c_str(), line.length());
+
+			nextStream = result.stream;
+		}
 	}
 
 	return stream->readMemoryBlock(data, bufSize);
@@ -86,7 +94,7 @@ bool HttpMultipartStream::seek(int len)
 
 bool HttpMultipartStream::isFinished()
 {
-	return false;
+	return (finished && (stream == NULL || stream->isFinished()));
 }
 
 const char* HttpMultipartStream::getBoundary()
