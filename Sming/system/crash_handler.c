@@ -26,7 +26,7 @@
 
 extern void __real_system_restart_local();
 
-extern void ets_printf(const char*, ...);
+extern int ets_printf(const char*, ...);
 
 void uart_write_char_d(char c);
 static void uart0_write_char_d(char c);
