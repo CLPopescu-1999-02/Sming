@@ -4,7 +4,6 @@
 #include "m_printf.h"
 
 #define PGM_P  const char *
-#define PSTR(str) (str)
 #define PRIPSTR "%s"
 
 typedef void prog_void;
@@ -25,13 +24,9 @@ typedef uint32_t prog_uint32_t;
 #define PROGMEM __attribute__((aligned(4))) __attribute__((section(".irom.text")))
 #endif
 
-#define pgm_read_byte(addr) \
-({ \
-	const char *__addr = (const char *)(addr); \
-	const char __addrOffset = ((unsigned long)__addr & 3); \
-	const unsigned long *__addrAligned = (const unsigned long *)(__addr - __addrOffset); \
-	(unsigned char)((*__addrAligned) >> (__addrOffset << 3)); \
-})
+#define PSTR(s) (__extension__({static const char __c[] PROGMEM = (s); &__c[0];}))
+
+uint8_t pgm_read_byte(const void* addr);
 
 #define pgm_read_word(addr) \
 ({ \
