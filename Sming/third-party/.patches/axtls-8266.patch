@@ -253,3 +253,22 @@ index b67066c..1645ece 100644
  
  EXP_FUNC int STDCALL ax_open(const char *pathname, int flags); 
  
+diff --git a/compat/lwipr_compat.h b/compat/lwipr_compat.h
+index 0916412..08daa8c 100644
+--- a/compat/lwipr_compat.h
++++ b/compat/lwipr_compat.h
+@@ -27,7 +27,14 @@ extern "C" {
+ #define ERR_AXL_INVALID_CLIENTFD_DATA -104
+ #define ERR_AXL_INVALID_PBUF -105
+ 
++#ifdef SOCKET_READ
++#undef SOCKET_READ
++#endif
+ #define SOCKET_READ(A, B, C) 	ax_port_read(A, B, C)
++
++#ifdef SOCKET_WRITE
++#undef SOCKET_WRITE
++#endif
+ #define SOCKET_WRITE(A, B, C) 	ax_port_write(A, B, C)
+ 
+ /**
