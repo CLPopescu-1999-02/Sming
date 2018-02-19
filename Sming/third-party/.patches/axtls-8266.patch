@@ -113,45 +113,10 @@ index 4972119..f6f44f8 100644
      if (tp)
      {
 diff --git a/ssl/os_port.h b/ssl/os_port.h
-index ded2c48..4f78682 100644
+index b67066c..b51dd98 100644
 --- a/ssl/os_port.h
 +++ b/ssl/os_port.h
-@@ -44,6 +44,7 @@ extern "C" {
- #include "os_int.h"
- #include "config.h"
- #include <stdio.h>
-+#include "debug_progmem.h"
- 
- #ifdef WIN32
- #define STDCALL                 __stdcall
-@@ -60,14 +61,25 @@ extern "C" {
- 
- #if defined(ESP8266)
- 
-+extern int ax_port_read(int clientfd, uint8_t *buf, int bytes_needed);
-+extern int ax_port_write(int clientfd, uint8_t *buf, uint16_t bytes_needed);
-+
- #include "util/time.h"
-+extern void gettimeofday(struct timeval* t,void* timezone);
-+
- #include <errno.h>
- #define alloca(size) __builtin_alloca(size)
- #define TTY_FLUSH()
- #ifdef putc
- #undef putc
- #endif
--#define putc(x, f)   ets_putc(x)
-+#define putc(x, f)   debug_i("%c", (x))
-+#ifdef printf
-+#undef printf
-+#endif
-+#define printf  debug_i
-+#define snprintf m_snprintf
-+#define vprintf m_vprintf
- 
- #define SOCKET_READ(A,B,C)      ax_port_read(A,B,C)
- #define SOCKET_WRITE(A,B,C)     ax_port_write(A,B,C)
-@@ -92,7 +104,8 @@ extern "C" {
+@@ -92,7 +92,8 @@ extern "C" {
  #define be64toh(x) __bswap_constant_64(x)
  #endif
  
@@ -161,27 +126,8 @@ index ded2c48..4f78682 100644
  
  #ifndef PROGMEM
  #define PROGMEM __attribute__((aligned(4))) __attribute__((section(".irom.text")))
-@@ -232,6 +245,18 @@ EXP_FUNC int STDCALL getdomainname(char *buf, int buf_size);
- #endif  /* Not Win32 */
- 
- /* some functions to mutate the way these work */
-+#define malloc(A)       ax_port_malloc(A, __FILE__, __LINE__)
-+#ifndef realloc
-+#define realloc(A,B)    ax_port_realloc(A,B, __FILE__, __LINE__)
-+#endif
-+#define calloc(A,B)     ax_port_calloc(A,B, __FILE__, __LINE__)
-+#define free(x)         ax_port_free(x)
-+
-+EXP_FUNC void * STDCALL ax_port_malloc(size_t s, const char*, int);
-+EXP_FUNC void * STDCALL ax_port_realloc(void *y, size_t s, const char*, int);
-+EXP_FUNC void * STDCALL ax_port_calloc(size_t n, size_t s, const char*, int);
-+EXP_FUNC void * STDCALL ax_port_free(void*);
-+
- inline uint32_t htonl(uint32_t n){
-   return ((n & 0xff) << 24) |
-     ((n & 0xff00) << 8) |
 diff --git a/ssl/tls1.h b/ssl/tls1.h
-index 31d6b0b..fb7f5e4 100644
+index dac63b9..3fa5d5f 100644
 --- a/ssl/tls1.h
 +++ b/ssl/tls1.h
 @@ -43,7 +43,6 @@ extern "C" {
