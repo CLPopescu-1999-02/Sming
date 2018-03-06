@@ -17,6 +17,7 @@ extern const unsigned int A0; // Single ESP8266EX analog input pin (TOUT) 10 bit
 #define NOT_A_PIN 0
 #define NOT_A_PORT 0
 #define NOT_ON_TIMER 0
+#define NOT_AN_INTERRUPT -1
 
 #define PA 1
 #define PB 2

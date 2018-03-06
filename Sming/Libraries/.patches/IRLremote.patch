@@ -1,0 +1,238 @@
+diff --git a/library.properties b/library.properties
+index 8e030e8..e473ff1 100644
+--- a/library.properties
++++ b/library.properties
+@@ -6,4 +6,4 @@ sentence=Lightweight Infrared library for Arduino
+ paragraph=IRLremote implements a fast and compact way to analyze IR signals with PinInterrupts and PinChangeInterrupts.
+ category=Signal Input/Output
+ url=https://github.com/NicoHood/IRLremote
+-architectures=avr
++architectures=avr,esp8266
+diff --git a/src/IRL_Decode.h b/src/IRL_Decode.h
+index 2126bd8..235d3fe 100644
+--- a/src/IRL_Decode.h
++++ b/src/IRL_Decode.h
+@@ -24,10 +24,7 @@ THE SOFTWARE.
+ // Include guard
+ #pragma once
+ 
+-#ifdef ARDUINO
+-#include <Arduino.h> // micros()
+-#endif
+-#include <util/atomic.h>
++#include "IRL_Platform.h"
+ 
+ //==============================================================================
+ // CIRL_DecodeSpaces Class
+@@ -186,8 +183,7 @@ bool CIRL_DecodeSpaces<T, blocks>::receiving(void)
+     bool ret = false;
+ 
+     // Provess with interrupts disabled to avoid any conflicts
+-    ATOMIC_BLOCK(ATOMIC_RESTORESTATE)
+-    {
++    RB_ATOMIC_START
+         // Check if we already recognized a timed out
+         if (count == 0) {
+             ret = false;
+@@ -209,7 +205,7 @@ bool CIRL_DecodeSpaces<T, blocks>::receiving(void)
+                 ret = true;
+             }
+         }
+-    }
++    RB_ATOMIC_END
+ 
+     return ret;
+ }
+diff --git a/src/IRL_Hash.h b/src/IRL_Hash.h
+index 3815015..5a11221 100644
+--- a/src/IRL_Hash.h
++++ b/src/IRL_Hash.h
+@@ -110,10 +110,11 @@ bool CHashIR::available(void){
+     // First look for a timeout
+     receiving();
+     bool ret;
+-    ATOMIC_BLOCK(ATOMIC_RESTORESTATE)
+-    {
++    RB_ATOMIC_START
++	{
+         ret = lastDuration == 0;
+     }
++    RB_ATOMIC_END
+     return ret;
+ }
+ 
+@@ -131,8 +132,8 @@ bool CHashIR::receiving(void)
+     bool ret = false;
+ 
+     // Provess with interrupts disabled to avoid any conflicts
+-    ATOMIC_BLOCK(ATOMIC_RESTORESTATE)
+-    {
++    RB_ATOMIC_START
++	{
+         // Check if we already recognized a timed out
+         if (count == 0) {
+             ret = false;
+@@ -164,6 +165,7 @@ bool CHashIR::receiving(void)
+             }
+         }
+     }
++    RB_ATOMIC_END
+ 
+     return ret;
+ }
+diff --git a/src/IRL_Platform.h b/src/IRL_Platform.h
+new file mode 100644
+index 0000000..2dd5030
+--- /dev/null
++++ b/src/IRL_Platform.h
+@@ -0,0 +1,54 @@
++/*
++Copyright (c) 2014-2018 NicoHood
++See the readme for credit to other people.
++
++Permission is hereby granted, free of charge, to any person obtaining a copy
++of this software and associated documentation files (the "Software"), to deal
++in the Software without restriction, including without limitation the rights
++to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
++copies of the Software, and to permit persons to whom the Software is
++furnished to do so, subject to the following conditions:
++
++The above copyright notice and this permission notice shall be included in
++all copies or substantial portions of the Software.
++
++THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
++IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
++FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
++AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
++LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
++OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
++THE SOFTWARE.
++*/
++
++// Include guard
++#pragma once
++
++#ifdef ARDUINO
++#include <Arduino.h> // micros()
++#endif
++
++#if defined(ARDUINO_ARCH_AVR)
++	#include <util/atomic.h>
++    #define RB_ATOMIC_START ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
++    #define RB_ATOMIC_END }
++#elif defined(ARDUINO_ARCH_ESP8266) ||  defined(ESP8266)
++	#ifndef __STRINGIFY
++    #define __STRINGIFY(a) #a
++    #endif
++
++    #ifndef xt_rsil
++        #define xt_rsil(level) (__extension__({uint32_t state; __asm__ __volatile__("rsil %0," __STRINGIFY(level) : "=a" (state)); state;}))
++    #endif
++
++    #ifndef xt_wsr_ps
++        #define xt_wsr_ps(state)  __asm__ __volatile__("wsr %0,ps; isync" :: "a" (state) : "memory")
++    #endif
++
++    #define RB_ATOMIC_START do { \
++    		uint32_t _savedIS = xt_rsil(1) ;
++    #define RB_ATOMIC_END xt_wsr_ps(_savedIS); \
++    		} while(0);
++#else
++	#error “This library supports only AVR and ESP8266 Boards.”
++#endif
+diff --git a/src/IRL_Protocol.h b/src/IRL_Protocol.h
+index 9157702..5e97978 100644
+--- a/src/IRL_Protocol.h
++++ b/src/IRL_Protocol.h
+@@ -24,10 +24,7 @@ THE SOFTWARE.
+ // Include guard
+ #pragma once
+ 
+-#ifdef ARDUINO
+-#include <Arduino.h> // micros()
+-#endif
+-#include <util/atomic.h>
++#include "IRL_Platform.h"
+ 
+ //==============================================================================
+ // IRL_Protocol Class
+@@ -58,8 +55,8 @@ Protocol_data_t CIRL_Protocol<T, Protocol_data_t>::read(void)
+     Protocol_data_t retdata = Protocol_data_t();
+ 
+     // Disable interrupts while accessing volatile data
+-    ATOMIC_BLOCK(ATOMIC_RESTORESTATE)
+-    {
++    RB_ATOMIC_START
++	{
+         // Check and get data if we have new.
+         if (static_cast<T*>(this)->available())
+         {
+@@ -76,6 +73,7 @@ Protocol_data_t CIRL_Protocol<T, Protocol_data_t>::read(void)
+             static_cast<T*>(this)->resetReading();
+         }
+     }
++    RB_ATOMIC_END
+ 
+     // Return the new protocol information to the user
+     return retdata;
+diff --git a/src/IRL_Time.h b/src/IRL_Time.h
+index bf59f85..23b10f4 100644
+--- a/src/IRL_Time.h
++++ b/src/IRL_Time.h
+@@ -24,10 +24,7 @@ THE SOFTWARE.
+ // Include guard
+ #pragma once
+ 
+-#ifdef ARDUINO
+-#include <Arduino.h> // micros()
+-#endif
+-#include <util/atomic.h>
++#include "IRL_Platform.h"
+ 
+ //==============================================================================
+ // IRL_Time Class
+@@ -98,10 +95,11 @@ uint32_t CIRL_Time<T>::timeout(void)
+ {
+     uint32_t timeout;
+ 
+-    ATOMIC_BLOCK(ATOMIC_RESTORESTATE)
+-    {
++    RB_ATOMIC_START
++	{
+         timeout = mlastEvent;
+     }
++    RB_ATOMIC_END
+ 
+     uint32_t time = micros();
+     timeout = time - timeout;
+@@ -117,10 +115,11 @@ template<class T>
+ uint32_t CIRL_Time<T>::lastEvent(void)
+ {
+     uint32_t time;
+-    ATOMIC_BLOCK(ATOMIC_RESTORESTATE)
+-    {
++    RB_ATOMIC_START
++	{
+         time = mlastEvent;
+     }
++    RB_ATOMIC_END
+ 
+     return time;
+ }
+diff --git a/src/IRLremote.h b/src/IRLremote.h
+index 88ada51..787e10a 100644
+--- a/src/IRLremote.h
++++ b/src/IRLremote.h
+@@ -38,11 +38,7 @@ THE SOFTWARE.
+ #include <util/delay_basic.h>
+ #endif
+ 
+-// Include external libraries
+-#ifdef ARDUINO
+-#include <Arduino.h>
+-#endif
+-#include <util/atomic.h>
++#include "IRL_Platform.h"
+ 
+ // Include all protocol implementations
+ #include "IRL_Nec.h"

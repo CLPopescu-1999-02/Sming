@@ -65,3 +65,7 @@
 	path = tools/esptool2
 	url = https://github.com/raburton/esptool2.git
 	ignore = dirty
+[submodule "Sming/Libraries/IRLremote"]
+	path = Sming/Libraries/IRLremote
+	url = https://github.com/NicoHood/IRLremote.git
+	ignore = dirty
