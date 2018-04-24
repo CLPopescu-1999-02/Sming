@@ -287,7 +287,7 @@ err_t WebsocketClient::onReceive(pbuf* buf)
 				{
 				case WSFrameType::text:
 				{
-//						debug_d("Got text frame");
+//					debug_d("Got text frame");
 					String msg;
 					msg.setString((char*)wsFrame._payload, wsFrame._payloadLength);
 					if (wsMessage)
@@ -298,7 +298,7 @@ err_t WebsocketClient::onReceive(pbuf* buf)
 				}
 				case WSFrameType::binary:
 				{
-//						debug_d("Got binary frame");
+//					debug_d("Got binary frame");
 					if (wsBinary)
 					{
 						wsBinary(*this, wsFrame._payload, wsFrame._payloadLength);

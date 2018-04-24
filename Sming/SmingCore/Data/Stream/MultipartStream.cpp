@@ -8,7 +8,7 @@
  *
  ****/
 
-#include "HttpMultipartStream.h"
+#include "MultipartStream.h"
 
 HttpMultipartStream::HttpMultipartStream(HttpPartProducerDelegate delegate): producer(delegate)
 {

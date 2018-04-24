@@ -8,8 +8,8 @@
  *
  ****/
 
-#ifndef _SMING_CORE_DATA_BASE64STREAM_H_
-#define _SMING_CORE_DATA_BASE64STREAM_H_
+#ifndef _SMING_CORE_DATA_STREAMTRANSFORMER_H_
+#define _SMING_CORE_DATA_STREAMTRANSFORMER_H_
 
 #include "../../../CircularBuffer.h"
 
@@ -18,22 +18,32 @@
 #include <functional>
 
 /**
- * @brief      Base64 Stream
+ * @brief      Class that can be used to transform streams of data on the fly
  * @ingroup    stream data
  *
  *  @{
 */
 
-typedef std::function<uint8_t*(uint8_t* data, int length, int* outputLength)> StreamTransformerCallback;
+/**
+ * @brief Callback specification for the stream transformers
+ *
+ * @param uint8_t* in incoming stream
+ * @param int* inLength incoming stream length -> returns the actual size that was used...
+ * @param uint8_t* out output stream
+ * @param int outLength max bytes in the output stream
+ *
+ * @return int number of output bytes
+ */
+typedef std::function<int(uint8_t* in, size_t* inLength, uint8_t* out, size_t outLength)> StreamTransformerCallback;
 
 class StreamTransformer: public ReadWriteStream
 {
 public:
-	StreamTransformer(ReadWriteStream *stream, StreamTransformerCallback callback, size_t readSize = 1024);
+	StreamTransformer(ReadWriteStream *stream, StreamTransformerCallback callback, size_t resultSize = 256, size_t blockSize = 64);
 	virtual ~StreamTransformer();
 
 	//Use base class documentation
-	virtual StreamType getStreamType() { return stream->getStreamType(); }
+	virtual StreamType getStreamType() { return sourceStream->getStreamType(); }
 
 	/**
 	 * @brief Return the total length of the stream
@@ -63,14 +73,16 @@ public:
 	//Use base class documentation
 	virtual bool isFinished();
 
+protected:
+	StreamTransformerCallback transformCallback = nullptr;
+
 private:
-	ReadWriteStream *stream = NULL;
+	ReadWriteStream *sourceStream = NULL;
 	CircularBuffer *tempStream = NULL;
-	StreamTransformerCallback callback = nullptr;
-	size_t readSize;
+	uint8_t* result = nullptr;
+	size_t resultSize;
+	size_t blockSize;
 };
 
-uint8_t* base64StreamTransformer(uint8_t* data, int length, int* outputLength);
-
 /** @} */
-#endif /* _SMING_CORE_DATA_BASE64STREAM_H_ */
+#endif /* _SMING_CORE_DATA_STREAMTRANSFORMER_H_ */

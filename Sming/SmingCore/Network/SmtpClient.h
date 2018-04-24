@@ -4,7 +4,14 @@
  * http://github.com/anakod/Sming
  * All files of the Sming Core are provided under the LGPL v3 license.
  *
- * SmtpClient
+ * SmtpClient - asynchronous SmtpClient that supports the following features:
+ * - extended HELO command set
+ * - support for PIPELINING
+ * - support for STARTTLS (if the directive ENABLE_SSL=1 is set)
+ * - support for smtp connection over SSL (if the directive ENABLE_SSL=1 is set)
+ * - support for PLAIN and CRAM-MD5 authentication
+ * - support for multiple attachments
+ * - Support for base64 and quoted-printable transfer encoding
  *
  * Author: 2018 - Slavey Karadzhov <slav@attachix.com>
  *
@@ -19,6 +26,7 @@
 #pragma once
 
 #include "TcpClient.h"
+#include "../Data/MailMessage.h"
 #include "URL.h"
 #include "../../Wiring/WString.h"
 #include "../../Wiring/WVector.h"
@@ -28,7 +36,6 @@
 
 // TODO: Move the simpleConcurrentQueue to a better place
 #include "Http/HttpCommon.h"
-#include "Http/Stream/HttpMultipartStream.h"
 
 #undef min
 #undef max
@@ -37,8 +44,6 @@
 #define SMTP_PROTOCOL "smtp"
 #define SMTP_OVER_SSL_PROTOCOL "smtps"
 
-/* Max number of attachments per mail */
-#define SMTP_MAX_ATTACHMENTS 5
 /* Maximum waiting emails in the mail queue */
 #define SMTP_QUEUE_SIZE 5
 
@@ -72,7 +77,6 @@ enum SmtpState
 	eSMTP_SendAuthResponse,
 	eSMTP_SendingAuth,
 	eSMTP_Ready,
-	eSMTP_Start,
 	eSMTP_SendMail,
 	eSMTP_SendingMail,
 	eSMTP_SendRcpt,
@@ -89,84 +93,9 @@ enum SmtpState
 };
 
 class SmtpClient;
-class MailMessage;
 
 typedef HashMap<String, String> HttpHeaders;
-
-typedef std::function<void(SmtpClient& client, int code, char* status)> SmtpClientErrorCallback;
-typedef std::function<void(MailMessage& message, int code, char* status)> MailMessageSentCallback;
-
-
-typedef struct {
-	Stream* stream;
-	MimeType mime = MIME_TEXT;
-} MailAttachment;
-
-class MailMessage
-{
-	friend class SmtpClient;
-public:
-
-	String to;
-	String from;
-	String subject;
-	String cc;
-
-	void setHeader(const String& name, const String& value);
-
-	HttpHeaders& getHeaders();
-
-	/**
-	 * @brief Sets the body of the email
-	 * @param String body
-	 * @param MimeType mime
-	 */
-	bool setBody(const String& body, MimeType mime = MIME_TEXT);
-
-	/**
-	 * @brief Sets the body of the email
-	 * @param Stream& stream
-	 * @param MimeType mime
-	 */
-	bool setBody(ReadWriteStream* stream, MimeType mime = MIME_TEXT);
-
-	/**
-	 * @brief Adds attachment to the email
-	 */
-	bool addAttachment(FileStream* stream);
-
-	/**
-	 * @brief Adds attachment to the email
-	 */
-	bool addAttachment(ReadWriteStream* stream, MimeType mime, const String& filename = "");
-
-	/**
-	 * @brief Adds attachment to the email
-	 */
-	bool addAttachment(ReadWriteStream* stream, const String& mime, const String& filename = "");
-
-	/**
-	 * @brief callback that will be called once the message is sent
-	 */
-	void onSent(MailMessageSentCallback callback);
-
-	/**
-	 * @brief Get the generated data stream
-	 */
-	ReadWriteStream* getData();
-private:
-	ReadWriteStream* stream = nullptr;
-	HttpHeaders headers;
-	MailMessageSentCallback callback = nullptr;
-	Vector<HttpPartResult> attachments;
-
-private:
-	/**
-	 * @brief Takes care to fetch the correct streams for a message
-	 * @note The magic where all streams and attachments are packed together is happening here
-	 */
-	HttpPartResult multipartProducer();
-};
+typedef std::function<int(SmtpClient& client, int code, char* status)> SmtpClientCallback;
 
 class SmtpClient : protected TcpClient
 {
@@ -183,16 +112,60 @@ public:
 	 */
 	bool connect(const URL& url);
 
-	void onConnectError(SmtpClientErrorCallback callback);
-
 	/**
-	 * @brief Send a single message to the SMTP server
+	 * @brief Queues a single message before it is sent later to the SMTP server
+	 *
+	 * @param String& from
+	 * @param String& to
+	 * @param String& subject
+	 * @param String& body the body in plain text format
+	 *
+	 * @return true when the message was queued successfully, false otherwise
 	 */
 	bool send(const String&	from, const String&	to, const String& subject, const String& body);
 
+	/**
+	 * @brief Powerful method to queues a single message before it is sent later to the SMTP server
+	 * @param MailMessage* message
+	 *
+	 * @return true when the message was queued successfully, false otherwise
+	 */
 	bool send(MailMessage* message);
 
+	/**
+	 * @brief Gets the current message
+	 *
+	 * @return MailMessage* message - the message, or NULL if none is scheduled
+	 */
+	MailMessage* getCurrentMessage();
+
+	inline size_t countPending()
+	{
+		return mailQ.count();
+	}
+
+	/**
+	 * @brief Sends a quit command to the server and closes the TCP conneciton
+	 */
 	void quit();
+
+	/**
+	 * @brief Callback that will be called every time a message is sent successfully
+	 * @param SmtpClientCallback callback
+	 */
+	inline void onMessageSent(SmtpClientCallback callback)
+	{
+		messageSentCallback = callback;
+	}
+
+	/**
+	 * @brief Callback that will be called every an error occurs
+	 * @param SmtpClientCallback callback
+	 */
+	inline void onServerError(SmtpClientCallback callback)
+	{
+		errorCallback = callback;
+	}
 
 	using TcpClient::setTimeOut;
 
@@ -209,7 +182,6 @@ protected:
 	virtual err_t onReceive(pbuf *buf);
 	virtual void onReadyToSendData(TcpConnectionEvent sourceEvent);
 
-	bool sendMailStart(MailMessage* mail);
 	void sendMailHeaders(MailMessage* mail);
 	bool sendMailBody(MailMessage* mail);
 
@@ -227,8 +199,8 @@ private:
 	MailMessage *outgoingMail = nullptr;
 	SmtpState state = eSMTP_Banner;
 
-	SmtpClientErrorCallback connectErrorCallback = nullptr;
-
+	SmtpClientCallback errorCallback = nullptr;
+	SmtpClientCallback messageSentCallback = nullptr;
 
 private:
 	/**

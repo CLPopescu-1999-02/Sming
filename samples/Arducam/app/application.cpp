@@ -14,7 +14,7 @@
 
 #include <Libraries/ArduCAM/ArduCAMStream.h>
 #include <Services/HexDump/HexDump.h>
-#include <SmingCore/Network/Http/Stream/HttpMultipartStream.h>
+#include <SmingCore/Data/Stream/MultipartStream.h>
 
 
 // If you want, you can define WiFi settings globally in Eclipse Environment Variables
