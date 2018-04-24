@@ -4,37 +4,50 @@
 
 SmtpClient* client = null;
 
-
-void onConnectError(const SmtpClient& client, int code, char *status)
+int onServerError(SmtpClient& client, int code, char* status)
 {
 	debugf("Status: %s", status);
+
+	return 0; // return non-zero value to abort the connection
 }
 
-void onMailSent(const MailMessage& message, int code, char* status)
+int onMailSent(SmtpClient& client, int code, char* status)
 {
+	// get the sent mail message
+	MailMessage* mail = client.getCurrentMessage();
+
+	// The status line contains the unique ID that was given to this email
 	debugf("Status: %s", status);
+
+	// And if there are no more pending emails then you can disconnect from the server
+	if(!client.countPending()) {
+		client.quit();
+	}
+
+	return 0;
 }
 
-void onConnected() 
+void onConnected()
 {
 #ifdef ENABLE_SSL
 	client->addSslOptions(SSL_SERVER_VERIFY_LATER);
 #endif
 
-	client->onConnectError(onConnectError);
+	client->onServerError(onServerError);
 	client->connect(URL("smtp://user:password@host:port"));
 
 	MailMessage* mail = new MailMessage();
 	mail->from = "admin@sming.com";
 	mail->to = "slav@attachix.com";
-	mail->subject = "Smtp Subject";
-	mail->setBody("Test Data");
+	mail->subject = "Greetings from Sming";
+	mail->setBody("Hello.\r\n.\r\n"
+		      	  "This is test email from Sming <https://github.com/SmingHub/Sming>"
+		      	  "It contains attachment, Ümlauts, кирилица + etc");
 
-	FileStream* file= new FileStream("data.txt");
+	FileStream* file= new FileStream("image.png");
 	mail->addAttachment(file);
 
-	mail->onSent(onMailSent);
-
+	client->onMessageSent(onMailSent);
 	client->send(mail);
 }
 
@@ -46,5 +59,5 @@ void init()
 
 	client = new SmtpClient();
 
-	// TODO:: finish the sample once the SmtpClient is ready for prime time.
+	spiffs_mount();
 }

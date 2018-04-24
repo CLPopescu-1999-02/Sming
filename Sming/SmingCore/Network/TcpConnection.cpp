@@ -46,7 +46,7 @@ TcpConnection::~TcpConnection()
 	}
 }
 
-bool TcpConnection::connect(String server, int port, bool useSsl /* = false */, uint32_t sslOptions /* = 0 */)
+bool TcpConnection::connect(const String& server, int port, bool useSsl /* = false */, uint32_t sslOptions /* = 0 */)
 {
 	if (tcp == NULL)
 		initialize(tcp_new());

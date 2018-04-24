@@ -8,35 +8,45 @@
  *
  ****/
 
-#ifndef _SMING_CORE_HTTP_CHUNKEDSTREAM_H_
-#define _SMING_CORE_HTTP_CHUNKEDSTREAM_H_
+#ifndef _SMING_CORE_DATA_MPARTSTREAM_H_
+#define _SMING_CORE_DATA_MPARTSTREAM_H_
 
-#include "../HttpCommon.h"
-#include "../HttpResponse.h"
-#include "../HttpRequest.h"
-#include "../../../CircularBuffer.h"
+#include "../../DataSourceStream.h"
+#include "Delegate.h"
+
+typedef HashMap<String, String> HttpHeaders;
 
 /**
- * @brief      HTTP chunked stream class
+ * @brief      HTTP multipart stream class
  * @ingroup    stream http
  *
  *  @{
 */
 
-class HttpChunkedStream: public ReadWriteStream
+typedef struct {
+	HttpHeaders* headers = NULL;
+	ReadWriteStream* stream  = NULL;
+} HttpPartResult;
+
+typedef Delegate <HttpPartResult()> HttpPartProducerDelegate;
+
+class HttpMultipartStream: public ReadWriteStream
 {
 public:
-	HttpChunkedStream(ReadWriteStream *stream);
-	virtual ~HttpChunkedStream();
+	HttpMultipartStream(HttpPartProducerDelegate delegate);
+	virtual ~HttpMultipartStream();
 
 	//Use base class documentation
-	virtual StreamType getStreamType() { return stream->getStreamType(); }
+	virtual StreamType getStreamType() {
+		// TODO: fix this...
+		return stream->getStreamType();
+	}
 
 	/**
 	 * @brief Return the total length of the stream
 	 * @retval int -1 is returned when the size cannot be determined
 	*/
-	int length() { return stream->available(); }
+	int length() { return -1; }
 
 	/** @brief  Write a single char to stream
 	 *  @param  charToWrite Char to write to the stream
@@ -60,10 +70,23 @@ public:
 	//Use base class documentation
 	virtual bool isFinished();
 
+	/**
+	 * @brief Returns the generated boundary
+	 *
+	 * @retval const char*
+	 */
+	const char* getBoundary();
+
 private:
+	HttpPartProducerDelegate producer;
+
 	ReadWriteStream *stream = NULL;
-	CircularBuffer *tempStream = NULL;
+	ReadWriteStream *nextStream = NULL;
+
+	char boundary[16] = {0};
+
+	bool finished = false;
 };
 
 /** @} */
-#endif /* _SMING_CORE_HTTP_CHUNKEDSTREAM_H_ */
+#endif /* _SMING_CORE_DATA_MPARTSTREAM_H_ */

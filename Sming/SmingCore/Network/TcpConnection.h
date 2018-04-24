@@ -86,7 +86,7 @@ public:
 	virtual ~TcpConnection();
 
 public:
-	virtual bool connect(String server, int port, bool useSsl = false, uint32_t sslOptions = 0);
+	virtual bool connect(const String& server, int port, bool useSsl = false, uint32_t sslOptions = 0);
 	virtual bool connect(IPAddress addr, uint16_t port, bool useSsl = false, uint32_t sslOptions = 0);
 	virtual void close();
 

@@ -3,8 +3,7 @@
 ## Uncomment and change examples:
 
 ## Add your source directories here separated by space
-MODULES = app
-MODULES += $(filter %/, $(wildcard ../myLibraries/*/))
+# MODULES = app
 
 # EXTRA_INCDIR = include
 
@@ -32,13 +31,13 @@ COM_PORT = COM6
 ## Com port speed
 COM_SPEED	= 115200
 
-## Configure flash parameters (for ESP12-E and other new boards):
-
-SPI_SIZE = 1M
-SPI_MODE = dio
-COM_SPEED = 921600
-COM_SPEED_ESPTOOL = 921600
-
 ## SPIFFS options
-DISABLE_SPIFFS = 1
-# SPIFF_FILES = files
+#DISABLE_SPIFFS = 1
+SPIFF_FILES = files
+
+ENABLE_SSL ?= 1
+
+ifneq ($(ENABLE_SSL),1)
+# Needed for hmac_md5, etc.
+	EXTRA_LIBS += ssl
+endif

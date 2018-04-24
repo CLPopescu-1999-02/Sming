@@ -10,60 +10,72 @@
 
 #include "StreamTransformer.h"
 
-#include "../../Services/WebHelpers/base64.h"
+#define NETWORK_SEND_BUFFER_SIZE 1024
 
-StreamTransformer::StreamTransformer(ReadWriteStream *stream, StreamTransformerCallback callback, size_t readSize/* = 1024 */)
+StreamTransformer::StreamTransformer(ReadWriteStream *stream, StreamTransformerCallback callback,
+									 size_t resultSize /* = 256 */, size_t blockSize /* = 64 */)
 {
-	this->stream = stream;
-	this->callback = callback;
-	this->readSize = readSize;
+	this->sourceStream = stream;
+	this->transformCallback = transformCallback;
+	this->resultSize = resultSize;
+	result = new uint8_t[this->resultSize];
+	this->blockSize = blockSize;
 }
 
 StreamTransformer::~StreamTransformer()
 {
+	delete[] result;
 	delete tempStream;
-	delete stream;
+	delete sourceStream;
+	result = NULL;
 	tempStream = NULL;
-	stream = NULL;
+	sourceStream = NULL;
 }
 
 size_t StreamTransformer::write(uint8_t charToWrite)
 {
-	return stream->write(charToWrite);
+	return sourceStream->write(charToWrite);
 }
 
 size_t StreamTransformer::write(const uint8_t *buffer, size_t size)
 {
-	return stream->write(buffer, size);
+	return sourceStream->write(buffer, size);
 }
 
 uint16_t StreamTransformer::readMemoryBlock(char* data, int bufSize)
 {
-	if(stream == NULL || stream->isFinished()) {
-		return 0;
+	if (tempStream == NULL) {
+		tempStream = new CircularBuffer(NETWORK_SEND_BUFFER_SIZE + 10);
 	}
 
-	if(tempStream == NULL) {
-		tempStream = new CircularBuffer(readSize + 10);
-	}
+	if (tempStream->isFinished()) {
 
-	if(!tempStream->isFinished()) {
-		return tempStream->readMemoryBlock(data, bufSize);
-	}
+		if(sourceStream->isFinished()) {
+			return 0;
+		}
 
-	// pump new data into the stream
-	int len = readSize;
-	char buffer[len];
-	len = stream->readMemoryBlock(buffer, len);
-	stream->seek(std::max(len, 0));
-	if(len < 1) {
-		return 0;
-	}
+		// Fill the temp buffer with data...
+		int i = bufSize / blockSize + 1;
+		do {
+			int len = blockSize;
+			if(i == 1) {
+				len = bufSize % blockSize;
+			}
+			len = sourceStream->readMemoryBlock(data, len);
+			size_t consumedLength = len;
+			int outLength = transformCallback((uint8_t*)data, &consumedLength, result, resultSize);
+			if( tempStream->write(result, outLength) != outLength) {
+				break;
+			}
 
-	int encodedLength = 0;
-	uint8_t *encodedData = callback((uint8_t *)buffer, len, &encodedLength);
-	tempStream->write(encodedData, encodedLength);
-	delete[] encodedData;
+			sourceStream->seek(consumedLength);
+
+			if(!len) {
+				break;
+			}
+		}
+		while(--i);
+	} /* if(tempStream->isFinished()) */
 
 	return tempStream->readMemoryBlock(data, bufSize);
 }
@@ -77,16 +89,5 @@ bool StreamTransformer::seek(int len)
 //Use base class documentation
 bool StreamTransformer::isFinished()
 {
-	return (stream->isFinished() && tempStream->isFinished());
+	return (sourceStream->isFinished() && tempStream->isFinished());
 }
-
-// Some Transformers...
-
-uint8_t* base64StreamTransformer(uint8_t* data, int length, int* outputLength)
-{
-	*outputLength = (length / 3 )* 4;
-	uint8_t* hash = new uint8_t[*outputLength];
-	base64_encode(length, data, *outputLength, (char *)hash);
-	return hash;
-}
-
