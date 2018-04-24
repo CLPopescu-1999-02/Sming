@@ -2,6 +2,12 @@
 #include <SmingCore/SmingCore.h>
 #include "SmingCore/Network/SmtpClient.h"
 
+// If you want, you can define WiFi settings globally in Eclipse Environment Variables
+#ifndef WIFI_SSID
+	#define WIFI_SSID "PleaseEnterSSID" // Put you SSID and Password here
+	#define WIFI_PWD "PleaseEnterPass"
+#endif
+
 SmtpClient* client = null;
 
 int onServerError(SmtpClient& client, int code, char* status)
@@ -27,8 +33,10 @@ int onMailSent(SmtpClient& client, int code, char* status)
 	return 0;
 }
 
-void onConnected()
+void onConnected(IPAddress ip, IPAddress mask, IPAddress gateway)
 {
+	client = new SmtpClient();
+
 #ifdef ENABLE_SSL
 	client->addSslOptions(SSL_SERVER_VERIFY_LATER);
 #endif
@@ -54,10 +62,14 @@ void onConnected()
 void init()
 {
 	Serial.begin(SERIAL_BAUD_RATE);
-	Serial.systemDebugOutput(true); // Allow debug print to serial
-	Serial.println("Sming. Let's send an email notification!");
-
-	client = new SmtpClient();
+	Serial.systemDebugOutput(true);
+	Serial.println("Sming: SmtpClient example!");
 
 	spiffs_mount();
+
+	// Setup the WIFI connection
+	WifiStation.enable(true);
+	WifiStation.config(WIFI_SSID, WIFI_PWD); // Put you SSID and Password here
+
+	WifiEvents.onStationGotIP(onConnected);
 }

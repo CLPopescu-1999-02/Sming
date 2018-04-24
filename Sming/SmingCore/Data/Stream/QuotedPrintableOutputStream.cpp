@@ -11,20 +11,20 @@
 #include "QuotedPrintableOutputStream.h"
 
 /*
- * @brief Stream base64 encoder.
+ * @brief Stream quoted-printable encoder
  * @param uint8_t* source - the incoming data
  * @param size_t sourceLength -length of the incoming data
  * @param uint8_t* target - the result data. The pointer must point to an already allocated memory
- * @param int* targetLength - the length of the result data
+ * @param int* targetLength - the length of the allocated result data
  */
-static int quotedPrintableTransformer(uint8_t* source, size_t* sourceLength, uint8_t* target, size_t targetLength)
+static int quotedPrintableTransformer(uint8_t* source, size_t sourceLength, uint8_t* target, size_t targetLength)
 {
 	char byte;
 	const char hex[] = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
 						 'A', 'B', 'C', 'D', 'E', 'F' };
 
 	int count = 0;
-	for (int i = 0; i < *sourceLength; i++) {
+	for (int i = 0; i < sourceLength; i++) {
 		byte = source[i];
 
 		if ((byte == ' ') || ((byte >= 33) && (byte <= 126) && (byte != '='))) {

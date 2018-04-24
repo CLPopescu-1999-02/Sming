@@ -54,7 +54,7 @@ uint16_t StreamTransformer::readMemoryBlock(char* data, int bufSize)
 			return 0;
 		}
 
-		// Fill the temp buffer with data...
+		// Fill the temp stream with data...
 		int i = bufSize / blockSize + 1;
 		do {
 			int len = blockSize;
@@ -62,13 +62,12 @@ uint16_t StreamTransformer::readMemoryBlock(char* data, int bufSize)
 				len = bufSize % blockSize;
 			}
 			len = sourceStream->readMemoryBlock(data, len);
-			size_t consumedLength = len;
-			int outLength = transformCallback((uint8_t*)data, &consumedLength, result, resultSize);
+			int outLength = transformCallback((uint8_t*)data, len, result, resultSize);
 			if( tempStream->write(result, outLength) != outLength) {
 				break;
 			}
 
-			sourceStream->seek(consumedLength);
+			sourceStream->seek(len);
 
 			if(!len) {
 				break;

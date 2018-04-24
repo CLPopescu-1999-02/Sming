@@ -34,7 +34,7 @@ public:
 	 *
 	 * @return the length of the encoded target.
 	 */
-	int encode(uint8_t* source, size_t* sourceLength, uint8_t* target, size_t targetLength);
+	int encode(uint8_t* source, size_t sourceLength, uint8_t* target, size_t targetLength);
 };
 
 /** @} */
