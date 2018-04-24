@@ -30,7 +30,6 @@
 #include "URL.h"
 #include "../../Wiring/WString.h"
 #include "../../Wiring/WVector.h"
-#include "../../Wiring/FIFO.h"
 #include "../DataSourceStream.h"
 #include "WebConstants.h"
 

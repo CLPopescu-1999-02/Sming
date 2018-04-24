@@ -17,8 +17,8 @@
 typedef HashMap<String, String> HttpHeaders;
 
 /**
- * @brief      HTTP multipart stream class
- * @ingroup    stream http
+ * @brief      Multipart stream class
+ * @ingroup    stream data
  *
  *  @{
 */

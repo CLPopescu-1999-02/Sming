@@ -14,7 +14,7 @@
 #include "../StreamTransformer.h"
 
 /**
- * @brief      Base64 Stream
+ * @brief      Quoted-Printable Stream
  * @ingroup    stream data
  *
  *  @{
