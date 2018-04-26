@@ -12,8 +12,6 @@
 
 #include "HttpRequest.h"
 
-#include <algorithm>
-
 HttpRequest::HttpRequest(const URL& uri) {
 	this->uri = uri;
 }
@@ -161,7 +159,7 @@ String HttpRequest::getBody()
 		char buf[1024];
 		while(stream->available() > 0) {
 			int available = memory->readMemoryBlock(buf, 1024);
-			memory->seek(std::max(available, 0));
+			memory->seek(available);
 			ret += String(buf, available);
 			if(available < 1024) {
 				break;
