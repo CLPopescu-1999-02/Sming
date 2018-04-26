@@ -3,6 +3,9 @@
 ChunkedStream::ChunkedStream(ReadWriteStream *stream, size_t resultSize /* = 512 */):
 	StreamTransformer(stream, nullptr, resultSize, resultSize - 12)
 {
+	transformCallback = std::bind(&ChunkedStream::encode, this,
+								  std::placeholders::_1, std::placeholders::_2,
+								  std::placeholders::_3, std::placeholders::_4);
 }
 
 int ChunkedStream::encode(uint8_t* source, size_t sourceLength,
@@ -16,8 +19,7 @@ int ChunkedStream::encode(uint8_t* source, size_t sourceLength,
 
 	int offset = 0;
 	char chunkSize[5] = {0};
-	// <chunkSize>"\r\n"
-	ultoa(sourceLength, chunkSize, 10);
+	ets_sprintf(chunkSize, "%X", sourceLength);
 
 	memcpy(target, chunkSize, strlen(chunkSize));
 	offset += strlen(chunkSize);
