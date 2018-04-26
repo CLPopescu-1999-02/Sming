@@ -397,8 +397,7 @@ int SmtpClient::smtpParse(char* buffer, size_t len)
 
 			if(isLastLine) {
 				state = eSMTP_Ready;
-//#if ENABLE_SSL
-#if 0
+#ifdef ENABLE_SSL
 				if(!useSsl && (options & SMTP_OPT_STARTTLS)) {
 					state = eSMTP_StartTLS;
 				} else

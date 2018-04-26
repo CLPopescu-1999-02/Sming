@@ -36,8 +36,6 @@
 // TODO: Move the simpleConcurrentQueue to a better place
 #include "Http/HttpCommon.h"
 
-#undef min
-#undef max
 #include <functional>
 
 #define SMTP_PROTOCOL "smtp"
