@@ -77,7 +77,7 @@ HttpRequest* HttpRequest::setHeaders(const HttpHeaders& headers) {
 }
 
 HttpRequest* HttpRequest::setHeader(const String& name, const String& value) {
-	this->headers[name] = value; // TODO: add here name and/or value escaping.
+	this->headers[name] = value;
 	return this;
 }
 
@@ -91,6 +91,17 @@ HttpRequest* HttpRequest::setPostParameters(const HttpParams& params)
 HttpRequest* HttpRequest::setPostParameter(const String& name, const String& value)
 {
 	postParams[name] = value;
+	return this;
+}
+
+HttpRequest* HttpRequest::setFile(const String& formElementName, FileStream* stream)
+{
+	if(stream == null) {
+		return this;
+	}
+
+	files[formElementName] = stream;
+
 	return this;
 }
 

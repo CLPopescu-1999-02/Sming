@@ -18,6 +18,7 @@
 #include "HttpRequest.h"
 #include "../TcpClient.h"
 #include "../../DataSourceStream.h"
+#include "../../Data/Stream/MultipartStream.h"
 #include "../../Services/DateTime/DateTime.h"
 
 typedef SimpleConcurrentQueue<HttpRequest*, HTTP_REQUEST_POOL_SIZE> RequestQueue;
@@ -125,6 +126,9 @@ protected:
 
 private:
 	HttpConnectionState state = eHCS_Ready;
+
+private:
+	HttpPartResult multipartProducer();
 };
 
 #endif /* _SMING_CORE_HTTP_CONNECTION_H_ */

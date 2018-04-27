@@ -12,8 +12,7 @@
 
 #include "HttpConnection.h"
 #include "../../Data/Stream/ChunkedStream.h"
-
-#include "../../Services/WebHelpers/escape.h"
+#include "../../Data/Stream/UrlencodedOutputStream.h"
 
 #ifdef __linux__
 #include "lwip/priv/tcp_priv.h"
@@ -186,6 +185,41 @@ int HttpConnection::staticOnMessageBegin(http_parser* parser)
 	}
 
 	return 0;
+}
+
+HttpPartResult HttpConnection::multipartProducer()
+{
+	HttpPartResult result;
+
+	if(outgoingRequest->files.count()) {
+		String name = outgoingRequest->files.keyAt(0);
+		FileStream *file = outgoingRequest->files[name];
+		result.stream = file;
+
+		HttpHeaders* headers = new HttpHeaders();
+		(*headers)["Content-Disposition"] = "form-data; name=\""+name+"\"; filename=\""+file->fileName()+"\"";
+		(*headers)["Content-Type"] = ContentType::fromFullFileName(file->fileName());
+
+		outgoingRequest->files.remove(name);
+		return result;
+	}
+
+	if(outgoingRequest->postParams.count()) {
+		String name = outgoingRequest->postParams.keyAt(0);
+		String value = outgoingRequest->postParams[name];
+
+		MemoryDataStream* mStream = new MemoryDataStream();
+		mStream->write((uint8_t* )value.c_str(), value.length());
+		result.stream = mStream;
+
+		HttpHeaders* headers = new HttpHeaders();
+		(*headers)["Content-Disposition"] = "form-data; name=\""+name+"\"";
+
+		outgoingRequest->postParams.remove(name);
+		return result;
+	}
+
+	return result;
 }
 
 int HttpConnection::staticOnMessageComplete(http_parser* parser)
@@ -435,14 +469,38 @@ void HttpConnection::sendRequestHeaders(HttpRequest* request)
 {
 	sendString(http_method_str(request->method) + String(" ") + request->uri.getPathWithQuery() + " HTTP/1.1\r\nHost: " + request->uri.Host + "\r\n");
 
-	// TODO: represent the post params as stream ...
-
 	// Adjust the content-length
 	request->headers["Content-Length"] = "0";
 	if(request->rawDataLength) {
 		request->headers["Content-Length"] = String(request->rawDataLength);
 	}
-	else if (request->stream != NULL) {
+
+	if (request->files.count()) {
+		MultipartStream* mStream = new MultipartStream(
+				HttpPartProducerDelegate(&HttpConnection::multipartProducer,
+						this));
+		request->headers["Content-Type"] = ContentType::toString(
+				MIME_FORM_MULTIPART) + String("; boundary=")
+				+ mStream->getBoundary();
+		if (request->stream) {
+			debug_e("HttpConnection: existing stream is discarded due to POST params");
+			delete request->stream;
+		}
+		request->stream = mStream;
+	} else if (request->postParams.count()) {
+		UrlencodedOutputStream* uStream = new UrlencodedOutputStream(
+				request->postParams);
+		request->headers["Content-Type"] = ContentType::toString(
+				MIME_FORM_URL_ENCODED);
+		if (request->stream) {
+			debug_e("HttpConnection: existing stream is discarded due to POST params");
+			delete request->stream;
+		}
+		request->stream = uStream;
+	} /* if (request->postParams.count()) */
+
+
+	if(request->stream != NULL) {
 		if(request->stream->available() > -1) {
 			request->headers["Content-Length"] = String(request->stream->available());
 		}
@@ -455,12 +513,9 @@ void HttpConnection::sendRequestHeaders(HttpRequest* request)
 		request->headers["Transfer-Encoding"] = "chunked";
 	}
 
-	if(request->postParams.count() && !request->headers.contains("Content-Type")) {
-		request->headers["Content-Type"] = ContentType::toString(MIME_FORM_URL_ENCODED);
-	}
-
 	for (int i = 0; i < request->headers.count(); i++)
 	{
+		// TODO: add here name and/or value escaping.
 		String write = request->headers.keyAt(i) + ": " + request->headers.valueAt(i) + "\r\n";
 		sendString(write.c_str());
 	}
@@ -478,19 +533,6 @@ bool HttpConnection::sendRequestBody(HttpRequest* request)
 
 			return false;
 		}
-
-#if 0
-		// Post Params should be also stream...
-		if (request->postParams.count())  {
-			for(int i = 0; i < request->postParams.count(); i++) {
-				// TODO: prevent memory fragmentation ...
-				char *dest = uri_escape(NULL, 0, request->postParams.valueAt(i).c_str(), request->postParams.valueAt(i).length());
-				String write = request->postParams.keyAt(i) + "=" + String(dest) + "&";
-				sendString(write.c_str());
-				free(dest);
-			}
-		}
-#endif
 
 		if(request->stream == NULL) {
 			return true;

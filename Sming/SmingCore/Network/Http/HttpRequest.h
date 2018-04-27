@@ -52,6 +52,14 @@ public:
 	HttpRequest* setPostParameters(const HttpParams& params);
 	HttpRequest* setPostParameter(const String& name, const String& value);
 
+	/**
+	 * @brief Sets a file to be sent
+	 * @param const String& name the name of the element in the form
+	 * @param FileStream* stream - pointer to the file stream
+	 *
+	 * @return HttpRequest*
+	 */
+	HttpRequest* setFile(const String& name, FileStream* stream);
 
 #ifdef ENABLE_HTTP_REQUEST_AUTH
 	// Authentication adapters set here
@@ -132,6 +140,7 @@ public:
 	HttpHeaders headers;
 
 	HttpParams postParams;
+	HashMap<String, FileStream*> files;
 
 	int retries = 0; // how many times the request should be send again...
 
