@@ -140,7 +140,6 @@ public:
 	HttpHeaders headers;
 
 	HttpParams postParams;
-	HashMap<String, FileStream*> files;
 
 	int retries = 0; // how many times the request should be send again...
 
@@ -151,8 +150,6 @@ protected:
 	RequestBodyDelegate requestBodyDelegate;
 	RequestCompletedDelegate requestCompletedDelegate;
 
-	uint8_t *rawData = NULL;
-	size_t rawDataLength = 0;
 	ReadWriteStream *stream = NULL;
 
 	IOutputStream *responseStream = NULL;
@@ -168,6 +165,8 @@ protected:
 #endif
 
 private:
+	HashMap<String, FileStream*> files;
+
 	HttpParams* queryParams = NULL; // << deprecated
 };
 

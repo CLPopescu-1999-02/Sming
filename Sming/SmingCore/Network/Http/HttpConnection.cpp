@@ -469,12 +469,6 @@ void HttpConnection::sendRequestHeaders(HttpRequest* request)
 {
 	sendString(http_method_str(request->method) + String(" ") + request->uri.getPathWithQuery() + " HTTP/1.1\r\nHost: " + request->uri.Host + "\r\n");
 
-	// Adjust the content-length
-	request->headers["Content-Length"] = "0";
-	if(request->rawDataLength) {
-		request->headers["Content-Length"] = String(request->rawDataLength);
-	}
-
 	if (request->files.count()) {
 		MultipartStream* mStream = new MultipartStream(
 				HttpPartProducerDelegate(&HttpConnection::multipartProducer,
@@ -526,13 +520,6 @@ bool HttpConnection::sendRequestBody(HttpRequest* request)
 {
 	if(state == eHCS_StartBody) {
 		state = eHCS_SendingBody;
-		// if there is input raw data -> send it
-		if(request->rawDataLength > 0) {
-			TcpClient::send((const char*)request->rawData, (uint16_t)request->rawDataLength);
-			request->rawDataLength = 0;
-
-			return false;
-		}
 
 		if(request->stream == NULL) {
 			return true;
