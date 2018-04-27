@@ -218,7 +218,7 @@ void onStream(HttpRequest &request, HttpResponse &response) {
 	myCAM.clear_fifo_flag();
 	myCAM.write_reg(ARDUCHIP_FRAMES, 0x00);
 
-	HttpMultipartStream* stream = new HttpMultipartStream(snapshotProducer);
+	MultipartStream* stream = new MultipartStream(snapshotProducer);
 	response.sendDataStream(stream, String("multipart/x-mixed-replace; boundary=") + stream->getBoundary());
 }
 

@@ -18,6 +18,8 @@
 
 #include "SmtpClient.h"
 #include "../../Services/WebHelpers/base64.h"
+#include "../Data/Stream/QuotedPrintableOutputStream.h"
+#include "../Data/Stream/Base64OutputStream.h"
 
 #if !defined(ENABLE_SSL) || ENABLE_SSL == 0
 // if our SSL is not used then we try to use the one coming from the SDK
@@ -274,9 +276,49 @@ void SmtpClient::onReadyToSendData(TcpConnectionEvent sourceEvent)
 	TcpClient::onReadyToSendData(sourceEvent);
 }
 
+HttpPartResult SmtpClient::multipartProducer()
+{
+	HttpPartResult result;
+
+	if(outgoingMail->attachments.count()) {
+		result = outgoingMail->attachments[0];
+
+		if(!result.headers->contains("Content-Transfer-Encoding")) {
+			result.stream = new Base64OutputStream(result.stream);
+			(*result.headers)["Content-Transfer-Encoding"] = "base64";
+		}
+
+		outgoingMail->attachments.remove(0);
+	}
+
+	return result;
+}
+
 void SmtpClient::sendMailHeaders(MailMessage* mail)
 {
 	mail->getHeaders();
+
+	if(!mail->headers.contains("Content-Transfer-Encoding")) {
+		mail->headers["Content-Transfer-Encoding"] = "quoted-printable";
+		mail->stream = new QuotedPrintableOutputStream(mail->stream);
+	}
+
+	if(mail->attachments.count()) {
+		MultipartStream* mStream = new MultipartStream(
+										HttpPartProducerDelegate(&SmtpClient::multipartProducer, this));
+		HttpPartResult text;
+		text.headers = new HttpHeaders();
+		(*text.headers)["Content-Type"] = mail->headers["Content-Type"];
+		(*text.headers)["Content-Transfer-Encoding"] = mail->headers["Content-Transfer-Encoding"];
+		text.stream = mail->stream;
+
+		mail->attachments.insertElementAt(text, 0);
+
+		mail->headers.remove("Content-Transfer-Encoding");
+		mail->headers["Content-Type"] = String("multipart/mixed; boundary=") + mStream->getBoundary();
+		mail->stream = mStream;
+	}
+
 	for(int i=0; i< mail->headers.count(); i++) {
 		String key = mail->headers.keyAt(i);
 		String value = mail->headers.valueAt(i);

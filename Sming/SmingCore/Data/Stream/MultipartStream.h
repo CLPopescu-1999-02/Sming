@@ -30,11 +30,11 @@ typedef struct {
 
 typedef Delegate <HttpPartResult()> HttpPartProducerDelegate;
 
-class HttpMultipartStream: public ReadWriteStream
+class MultipartStream: public ReadWriteStream
 {
 public:
-	HttpMultipartStream(HttpPartProducerDelegate delegate);
-	virtual ~HttpMultipartStream();
+	MultipartStream(HttpPartProducerDelegate delegate);
+	virtual ~MultipartStream();
 
 	//Use base class documentation
 	virtual StreamType getStreamType() {

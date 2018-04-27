@@ -10,12 +10,12 @@
 
 #include "MultipartStream.h"
 
-HttpMultipartStream::HttpMultipartStream(HttpPartProducerDelegate delegate): producer(delegate)
+MultipartStream::MultipartStream(HttpPartProducerDelegate delegate): producer(delegate)
 {
 
 }
 
-HttpMultipartStream::~HttpMultipartStream()
+MultipartStream::~MultipartStream()
 {
 	delete stream;
 	stream = NULL;
@@ -23,19 +23,19 @@ HttpMultipartStream::~HttpMultipartStream()
 	nextStream = NULL;
 }
 
-size_t HttpMultipartStream::write(uint8_t charToWrite)
+size_t MultipartStream::write(uint8_t charToWrite)
 {
 	// TODO: those methods should not be used...
 	return 0;
 }
 
-size_t HttpMultipartStream::write(const uint8_t *buffer, size_t size)
+size_t MultipartStream::write(const uint8_t *buffer, size_t size)
 {
 	// TODO: those methods should not be used...
 	return 0;
 }
 	//Use base class documentation
-uint16_t HttpMultipartStream::readMemoryBlock(char* data, int bufSize)
+uint16_t MultipartStream::readMemoryBlock(char* data, int bufSize)
 {
 	if(stream != NULL && stream->isFinished()) {
 		delete stream;
@@ -87,17 +87,17 @@ uint16_t HttpMultipartStream::readMemoryBlock(char* data, int bufSize)
 	return stream->readMemoryBlock(data, bufSize);
 }
 
-bool HttpMultipartStream::seek(int len)
+bool MultipartStream::seek(int len)
 {
 	return stream->seek(len);
 }
 
-bool HttpMultipartStream::isFinished()
+bool MultipartStream::isFinished()
 {
 	return (finished && (stream == NULL || stream->isFinished()));
 }
 
-const char* HttpMultipartStream::getBoundary()
+const char* MultipartStream::getBoundary()
 {
 	if(boundary[0] == 0) {
 		static const char pool[] =

@@ -204,4 +204,11 @@ private:
 	 * @brief Simple and naive SMTP parser with a state machine
 	 */
 	int smtpParse(char* data, size_t len);
+
+private:
+	/**
+	 * @brief Takes care to fetch the correct streams for a message
+	 * @note The magic where all streams and attachments are packed together is happening here
+	 */
+	HttpPartResult multipartProducer();
 };

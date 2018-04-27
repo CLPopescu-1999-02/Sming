@@ -372,9 +372,6 @@ void HttpConnection::onReadyToSendData(TcpConnectionEvent sourceEvent)
 
 REENTER:
 	switch(state) {
-	case eHCS_Sent:
-		state = eHCS_Ready;
-
 	case eHCS_Ready: {
 		HttpRequest* request = waitingQueue->peek();
 		if(request == NULL) {
@@ -407,13 +404,14 @@ REENTER:
 		waitingQueue->dequeue();
 
 		outgoingRequest = request;
-		state = eHCS_SendingHeaders;
 		sendRequestHeaders(request);
+
+		state = eHCS_SendingHeaders;
 	}
 
 	case eHCS_SendingHeaders: {
 		if(stream != NULL && !stream->isFinished()) {
-				break;
+			break;
 		}
 
 		state = eHCS_StartBody;
@@ -422,7 +420,7 @@ REENTER:
 	case eHCS_StartBody:
 	case eHCS_SendingBody: {
 		if(sendRequestBody(outgoingRequest)) {
-			state = eHCS_Sent;
+			state = eHCS_Ready;
 			delete stream;
 			stream = NULL;
 			goto REENTER;

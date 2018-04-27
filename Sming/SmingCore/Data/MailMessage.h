@@ -38,7 +38,7 @@ public:
 	String subject;
 	String cc;
 
-	void setHeader(const String& name, const String& value);
+	MailMessage& setHeader(const String& name, const String& value);
 
 	HttpHeaders& getHeaders();
 
@@ -47,29 +47,29 @@ public:
 	 * @param String body
 	 * @param MimeType mime
 	 */
-	bool setBody(const String& body, MimeType mime = MIME_TEXT);
+	MailMessage& setBody(const String& body, MimeType mime = MIME_TEXT);
 
 	/**
 	 * @brief Sets the body of the email
 	 * @param Stream& stream
 	 * @param MimeType mime
 	 */
-	bool setBody(ReadWriteStream* stream, MimeType mime = MIME_TEXT);
+	MailMessage& setBody(ReadWriteStream* stream, MimeType mime = MIME_TEXT);
 
 	/**
 	 * @brief Adds attachment to the email
 	 */
-	bool addAttachment(FileStream* stream);
+	MailMessage&  addAttachment(FileStream* stream);
 
 	/**
 	 * @brief Adds attachment to the email
 	 */
-	bool addAttachment(ReadWriteStream* stream, MimeType mime, const String& filename = "");
+	MailMessage&  addAttachment(ReadWriteStream* stream, MimeType mime, const String& filename = "");
 
 	/**
 	 * @brief Adds attachment to the email
 	 */
-	bool addAttachment(ReadWriteStream* stream, const String& mime, const String& filename = "");
+	MailMessage&  addAttachment(ReadWriteStream* stream, const String& mime, const String& filename = "");
 
 	/**
 	 * @brief Get the generated data stream
@@ -80,13 +80,6 @@ private:
 	ReadWriteStream* stream = nullptr;
 	HttpHeaders headers;
 	Vector<HttpPartResult> attachments;
-
-private:
-	/**
-	 * @brief Takes care to fetch the correct streams for a message
-	 * @note The magic where all streams and attachments are packed together is happening here
-	 */
-	HttpPartResult multipartProducer();
 };
 
 /** @} */

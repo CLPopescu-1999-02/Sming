@@ -140,6 +140,11 @@ bool HttpResponse::sendTemplate(TemplateFileStream* newTemplateInstance)
 		if (mime != NULL)
 			setContentType(mime);
 	}
+
+	if(!hasHeader("Transfer-Encoding") && stream->available() == -1) {
+		setHeader("Transfer-Encoding", "chunked");
+	}
+
 	return true;
 }
 
