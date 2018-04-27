@@ -1,5 +1,5 @@
 #include <user_config.h>
-#include <SmingCore/SmingCore.h>
+#include "SmingCore/SmingCore.h"
 #include "SmingCore/Network/SmtpClient.h"
 
 // If you want, you can define WiFi settings globally in Eclipse Environment Variables
@@ -8,7 +8,16 @@
 	#define WIFI_PWD "PleaseEnterPass"
 #endif
 
-SmtpClient* client = null;
+// Make sure to change those to your desired values
+#define MAIL_FROM       "admin@sming.com"
+#define MAIL_TO         "slav@attachix.com"
+#define SMTP_USERNAME
+#define SMTP_PASSWORD
+#define SMTP_HOST  		"attachix.com"
+#define SMTP_PORT  		25
+#define SMTP_USE_SSL 	false
+
+SmtpClient client;
 
 int onServerError(SmtpClient& client, int code, char* status)
 {
@@ -22,11 +31,12 @@ int onMailSent(SmtpClient& client, int code, char* status)
 	// get the sent mail message
 	MailMessage* mail = client.getCurrentMessage();
 
-	// The status line contains the unique ID that was given to this email
-	debugf("Status: %s", status);
+	// TODO: The status line contains the unique ID that was given to this email
+	debugf("Mail sent. Status: %s", status);
 
 	// And if there are no more pending emails then you can disconnect from the server
 	if(!client.countPending()) {
+		debugf("No more mails to send. Quitting...");
 		client.quit();
 	}
 
@@ -35,18 +45,25 @@ int onMailSent(SmtpClient& client, int code, char* status)
 
 void onConnected(IPAddress ip, IPAddress mask, IPAddress gateway)
 {
-	client = new SmtpClient();
-
 #ifdef ENABLE_SSL
-	client->addSslOptions(SSL_SERVER_VERIFY_LATER);
+	client.addSslOptions(SSL_SERVER_VERIFY_LATER);
 #endif
 
-	client->onServerError(onServerError);
-	client->connect(URL("smtp://user:password@host:port"));
+	client.onServerError(onServerError);
+
+	String dsn = "smtp" ;
+	if(SMTP_USE_SSL) {
+		dsn + "s";
+	}
+
+	dsn += String("://") + SMTP_USERNAME + ":" + SMTP_PASSWORD+"@" + SMTP_HOST + ":" + SMTP_PORT;
+	debugf("Connecting to SMTP server using: %s", dsn.c_str());
+
+	client.connect(URL(dsn));
 
 	MailMessage* mail = new MailMessage();
-	mail->from = "admin@sming.com";
-	mail->to = "slav@attachix.com";
+	mail->from = MAIL_FROM;
+	mail->to = MAIL_TO;
 	mail->subject = "Greetings from Sming";
 	mail->setBody("Hello.\r\n.\r\n"
 		      	  "This is test email from Sming <https://github.com/SmingHub/Sming>"
@@ -55,8 +72,8 @@ void onConnected(IPAddress ip, IPAddress mask, IPAddress gateway)
 	FileStream* file= new FileStream("image.png");
 	mail->addAttachment(file);
 
-	client->onMessageSent(onMailSent);
-	client->send(mail);
+	client.onMessageSent(onMailSent);
+	client.send(mail);
 }
 
 void init()
