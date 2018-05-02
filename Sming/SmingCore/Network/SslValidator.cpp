@@ -15,21 +15,25 @@
 bool sslValidateCertificateSha1(SSL *ssl, void* data)
 {
 	uint8_t* hash = (uint8_t*)data;
+	bool success = false;
 	if(hash != NULL) {
-		return (ssl_match_fingerprint(ssl, hash) == 0);
+		success = (ssl_match_fingerprint(ssl, hash) == 0);
+		delete[] hash;
 	}
 
-	return false;
+	return success;
 }
 
 bool sslValidatePublicKeySha256(SSL *ssl, void* data)
 {
 	uint8_t* hash = (uint8_t*)data;
+	bool success = false;
 	if(hash != NULL) {
-		return (ssl_match_spki_sha256(ssl, hash) == 0);
+		success = (ssl_match_spki_sha256(ssl, hash) == 0);
+		delete[] hash;
 	}
 
-	return false;
+	return success;
 }
 
 #endif /* ENABLE_SSL */

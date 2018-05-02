@@ -31,7 +31,7 @@ TcpConnection::~TcpConnection()
 	close();
 
 #ifdef ENABLE_SSL
-	freeSslClientKeyCert();
+	freeSslKeyCert();
 #endif
 	debug_d("~TCP connection");
 
@@ -172,6 +172,13 @@ void TcpConnection::onReadyToSendData(TcpConnectionEvent sourceEvent)
 {
 	if (sourceEvent != eTCE_Poll) debug_d("onReadyToSendData: %d", sourceEvent);
 }
+
+#ifdef ENABLE_SSL
+err_t TcpConnection::onSslConnected(SSL *ssl)
+{
+	return ERR_OK;
+}
+#endif
 
 int TcpConnection::writeString(const String& data, uint8_t apiflags /* = TCP_WRITE_FLAG_COPY*/)
 {
@@ -418,20 +425,20 @@ err_t TcpConnection::staticOnConnected(void *arg, tcp_pcb *tcp, err_t err)
 
 			con->sslContext = ssl_ctx_new(SSL_CONNECT_IN_PARTS | sslOptions, 1);
 
-			if (con->clientKeyCert.keyLength && con->clientKeyCert.certificateLength) {
+			if (con->sslKeyCert.keyLength && con->sslKeyCert.certificateLength) {
 				// if we have client certificate -> try to use it.
 				if (ssl_obj_memory_load(con->sslContext, SSL_OBJ_RSA_KEY,
-						con->clientKeyCert.key, con->clientKeyCert.keyLength,
-						con->clientKeyCert.keyPassword) != SSL_OK) {
+						con->sslKeyCert.key, con->sslKeyCert.keyLength,
+						con->sslKeyCert.keyPassword) != SSL_OK) {
 					debug_d("SSL: Unable to load client private key");
 				} else if (ssl_obj_memory_load(con->sslContext, SSL_OBJ_X509_CERT,
-						con->clientKeyCert.certificate,
-						con->clientKeyCert.certificateLength, NULL) != SSL_OK) {
+						con->sslKeyCert.certificate,
+						con->sslKeyCert.certificateLength, NULL) != SSL_OK) {
 					debug_d("SSL: Unable to load client certificate");
 				}
 
-				if(con->freeClientKeyCert) {
-					con->freeSslClientKeyCert();
+				if(con->freeKeyCert) {
+					con->freeSslKeyCert();
 				}
 			}
 
@@ -554,16 +561,7 @@ err_t TcpConnection::staticOnReceive(void *arg, tcp_pcb *tcp, pbuf *p, err_t err
 				debug_d("SSL: Switching back to 80 MHz");
 				System.setCpuFrequency(eCF_80MHz); // Preserve some CPU cycles
 #endif
-
-				bool hasSuccess = (con->sslValidators.count() == 0);
-				for(int i=0; i< con->sslValidators.count(); i++) {
-					if(con->sslValidators[i](con->ssl, con->sslValidatorsData[i])) {
-						hasSuccess = true;
-						break;
-					}
-				}
-
-				if(!hasSuccess) {
+				if(con->onSslConnected(con->ssl) != ERR_OK) {
 					con->close();
 					closeTcpConnection(tcp);
 
@@ -695,108 +693,64 @@ void TcpConnection::addSslOptions(uint32_t sslOptions)
 	this->sslOptions |= sslOptions;
 }
 
-void TcpConnection::addSslValidator(SslValidatorCallback callback, void* data /* = NULL */)
-{
-	sslValidators.addElement(callback);
-	sslValidatorsData.addElement(data);
-}
-
-bool TcpConnection::pinCertificate(const uint8_t *fingerprint, SslFingerprintType type)
-{
-	SslValidatorCallback callback = nullptr;
-	switch(type) {
-	case eSFT_CertSha1:
-		callback = sslValidateCertificateSha1;
-		break;
-	case eSFT_PkSha256:
-		callback = sslValidatePublicKeySha256;
-		break;
-	default:
-		debug_d("Unsupported SSL certificate fingerprint type");
-	}
-
-	if(!callback) {
-		delete[] fingerprint;
-		return false;
-	}
-
-	addSslValidator(callback, (void *)fingerprint);
-
-	return true;
-}
-
-bool TcpConnection::pinCertificate(SSLFingerprints fingerprints)
-{
-	bool success = false;
-	if(fingerprints.certSha1 != NULL) {
-		success = pinCertificate(fingerprints.certSha1, eSFT_CertSha1);
-	}
-
-	if(fingerprints.pkSha256 != NULL) {
-		success = pinCertificate(fingerprints.pkSha256, eSFT_PkSha256);
-	}
-
-	return success;
-}
-
-bool TcpConnection::setSslClientKeyCert(const uint8_t *key, int keyLength,
+bool TcpConnection::setSslKeyCert(const uint8_t *key, int keyLength,
 							 const uint8_t *certificate, int certificateLength,
 							 const char *keyPassword /* = NULL */, bool freeAfterHandshake /* = false */)
 {
 
 
-	clientKeyCert.key = new uint8_t[keyLength];
-	clientKeyCert.certificate = new uint8_t[certificateLength];
+	sslKeyCert.key = new uint8_t[keyLength];
+	sslKeyCert.certificate = new uint8_t[certificateLength];
 	int passwordLength = 0;
 	if(keyPassword != NULL) {
 		passwordLength = strlen(keyPassword);
-		clientKeyCert.keyPassword = new char[passwordLength+1];
+		sslKeyCert.keyPassword = new char[passwordLength+1];
 	}
 
-	if(!(clientKeyCert.key && clientKeyCert.certificate &&
-	    (passwordLength==0 || (passwordLength!=0 && clientKeyCert.keyPassword)))) {
+	if(!(sslKeyCert.key && sslKeyCert.certificate &&
+	    (passwordLength==0 || (passwordLength!=0 && sslKeyCert.keyPassword)))) {
 		return false;
 	}
 
-	memcpy(clientKeyCert.key, key, keyLength);
-	memcpy(clientKeyCert.certificate, certificate, certificateLength);
-	memcpy(clientKeyCert.keyPassword, keyPassword, passwordLength);
-	freeClientKeyCert = freeAfterHandshake;
+	memcpy(sslKeyCert.key, key, keyLength);
+	memcpy(sslKeyCert.certificate, certificate, certificateLength);
+	memcpy(sslKeyCert.keyPassword, keyPassword, passwordLength);
+	freeKeyCert = freeAfterHandshake;
 
-	clientKeyCert.keyLength = keyLength;
-	clientKeyCert.certificateLength = certificateLength;
-	clientKeyCert.keyLength = keyLength;
-
-	return true;
-}
-
-bool TcpConnection::setSslClientKeyCert(SSLKeyCertPair clientKeyCert, bool freeAfterHandshake /* = false */)
-{
-	this->clientKeyCert = clientKeyCert;
-	freeClientKeyCert = freeAfterHandshake;
+	sslKeyCert.keyLength = keyLength;
+	sslKeyCert.certificateLength = certificateLength;
+	sslKeyCert.keyLength = keyLength;
 
 	return true;
 }
 
-void TcpConnection::freeSslClientKeyCert()
+bool TcpConnection::setSslKeyCert(SSLKeyCertPair clientKeyCert, bool freeAfterHandshake /* = false */)
 {
-	if(clientKeyCert.key) {
-		delete[] clientKeyCert.key;
-		clientKeyCert.key = NULL;
+	this->sslKeyCert = clientKeyCert;
+	freeKeyCert = freeAfterHandshake;
+
+	return true;
+}
+
+void TcpConnection::freeSslKeyCert()
+{
+	if(sslKeyCert.key) {
+		delete[] sslKeyCert.key;
+		sslKeyCert.key = NULL;
 	}
 
-	if(clientKeyCert.certificate) {
-		delete[] clientKeyCert.certificate;
-		clientKeyCert.certificate = NULL;
+	if(sslKeyCert.certificate) {
+		delete[] sslKeyCert.certificate;
+		sslKeyCert.certificate = NULL;
 	}
 
-	if(clientKeyCert.keyPassword) {
-		delete[] clientKeyCert.keyPassword;
-		clientKeyCert.keyPassword = NULL;
+	if(sslKeyCert.keyPassword) {
+		delete[] sslKeyCert.keyPassword;
+		sslKeyCert.keyPassword = NULL;
 	}
 
-	clientKeyCert.keyLength = 0;
-	clientKeyCert.certificateLength = 0;
+	sslKeyCert.keyLength = 0;
+	sslKeyCert.certificateLength = 0;
 }
 
 SSL* TcpConnection::getSsl() {

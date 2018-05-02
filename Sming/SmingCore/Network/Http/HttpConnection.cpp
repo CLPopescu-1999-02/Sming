@@ -469,6 +469,7 @@ void HttpConnection::sendRequestHeaders(HttpRequest* request)
 {
 	sendString(http_method_str(request->method) + String(" ") + request->uri.getPathWithQuery() + " HTTP/1.1\r\nHost: " + request->uri.Host + "\r\n");
 
+	request->headers["Content-Length"] = 0;
 	if (request->files.count()) {
 		MultipartStream* mStream = new MultipartStream(
 				HttpPartProducerDelegate(&HttpConnection::multipartProducer,
@@ -492,7 +493,6 @@ void HttpConnection::sendRequestHeaders(HttpRequest* request)
 		}
 		request->stream = uStream;
 	} /* if (request->postParams.count()) */
-
 
 	if(request->stream != NULL) {
 		if(request->stream->available() > -1) {

@@ -147,6 +147,11 @@ public:
 	void quit();
 
 	/**
+	 * @brief Returns the current state of the SmtpClient.
+	 */
+	SmtpState getState() { return state; }
+
+	/**
 	 * @brief Callback that will be called every time a message is sent successfully
 	 * @param SmtpClientCallback callback
 	 */

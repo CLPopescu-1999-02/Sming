@@ -16,7 +16,6 @@
 #ifdef ENABLE_SSL
 #include "../../axtls-8266/compat/lwipr_compat.h"
 #include "../Clock.h"
-#include "SslValidator.h"
 #endif
 
 #include "../Wiring/WiringFrameworkDependencies.h"
@@ -113,55 +112,10 @@ public:
 #ifdef ENABLE_SSL
 	void addSslOptions(uint32_t sslOptions);
 
-	/**
-	 * @brief Allows setting of multiple SSL validators after a successful handshake
-	 * @param SslValidatorCallback callback
-	 * @param void* data - The data that should be passed to the callback.
-	 * 					   The callback will cast the data to the correct type and take care
-	 * 					   to delete it.
-	 *
-	 */
-	void addSslValidator(SslValidatorCallback callback, void* data = NULL);
-
-	/**
-	 * @brief   Requires(pins) the remote SSL certificate to match certain fingerprints
-	 * 			Check if SHA256 hash of Subject Public Key Info matches the one given.
-	 * @note    For HTTP public key pinning (RFC7469), the SHA-256 hash of the
-	 * 		    Subject Public Key Info (which usually only changes when the public key changes)
-	 * 		    is used rather than the SHA-1 hash of the entire certificate
-	 * 		    (which will change on each certificate renewal).
-	 * @param const uint8_t *finterprint - the fingeprint data against which the match should be performed
-	 * 									   The fingerprint will be deleted after use and should
-	 * 									   not be reused outside of this method
-	 * @param SslFingerprintType type - the fingerprint type
-	 * @note    Type: eSFT_PkSha256
-	 * 			For HTTP public key pinning (RFC7469), the SHA-256 hash of the
-	 * 		    Subject Public Key Info (which usually only changes when the public key changes)
-	 * 		    is used rather than the SHA-1 hash of the entire certificate
-	 * 		    (which will change on each certificate renewal).
-	 * 		    Advantages: The
-	 * 		    Disadvantages: Takes more time (in ms) to verify.
-	 * @note    Type: eSFT_CertSha1
-	 * 			The SHA1 hash of the remote certificate will be calculated and compared with the given one.
-	 * 			Disadvantages: The hash needs to be updated every time the remote server updates its certificate
-	 *
-	 * @return bool  true of success, false or failure
-	 */
-	bool pinCertificate(const uint8_t *fingerprint, SslFingerprintType type);
-
-	/**
-	 * @brief   Requires(pins) the remote SSL certificate to match certain fingerprints
-	 *
-	 * @note  The data inside the fingerprints parameter is passed by reference
-	 *
-	 * @param SSLFingerprints - passes the certificate fingerprints by reference.
-	 *
-	 * @return bool  true of success, false or failure
-	 */
-	bool pinCertificate(SSLFingerprints fingerprints);
-
+// start deprecated
 	/**
 	 * @brief Sets client private key, certificate and password from memory
+	 * @deprecated: Use setSslKeyCert instead
 	 *
 	 * @note  This method makes copy of the data.
 	 *
@@ -176,10 +130,15 @@ public:
 	 */
 	bool setSslClientKeyCert(const uint8_t *key, int keyLength,
 							 const uint8_t *certificate, int certificateLength,
-							 const char *keyPassword = NULL, bool freeAfterHandshake = false);
+							 const char *keyPassword = NULL, bool freeAfterHandshake = false)
+	{
+		return setSslKeyCert(key, keyLength, certificate, certificateLength,
+							 keyPassword, freeAfterHandshake);
+	}
 
 	/**
 	* @brief Sets client private key, certificate and password from memory
+	* @deprecated: Use setSslKeyCert instead
 	*
 	* @note  This method passes the certificate key chain by reference
 	*
@@ -188,12 +147,66 @@ public:
 	*
 	* @return bool  true of success, false or failure
 	*/
-	bool setSslClientKeyCert(SSLKeyCertPair clientKeyCert, bool freeAfterHandshake = false);
+	bool setSslClientKeyCert(SSLKeyCertPair clientKeyCert, bool freeAfterHandshake = false)
+	{
+		return setSslKeyCert(clientKeyCert, freeAfterHandshake);
+	}
 
 	/**
-	 * @brief Frees the memory used for the client key and certificate pair
+	 * @brief Frees the memory used for the key and certificate pair
+	 * @deprecated: Use freeSslKeyCert instead
 	 */
-	void freeSslClientKeyCert();
+	void freeSslClientKeyCert()
+	{
+		freeSslKeyCert();
+	}
+
+// end deprecated
+
+	/**
+	 * @brief Sets private key, certificate and password from memory for the SSL connection
+	 * 		  If this methods is called from a client then it sets the client key and certificate
+	 * 		  If it is called from a server then it sets the server certificate and key.
+	 * 		  Server and Client certificates differ. Client certificate is used for identification.
+	 * 		  Server certificate is used for encrypt/decrypt the data.
+	 * 		  Make sure to use the correct certificate for the desired goal.
+	 *
+	 * @note  This method makes copy of the data.
+	 *
+	 * @param const uint8_t *keyData
+	 * @param int keyLength
+	 * @param const uint8_t *certificateData
+	 * @param int certificateLength
+	 * @param const char *keyPassword
+	 * @param bool freeAfterHandshake
+	 *
+	 * @return bool  true of success, false or failure
+	 */
+	bool setSslKeyCert(const uint8_t *key, int keyLength,
+							 const uint8_t *certificate, int certificateLength,
+							 const char *keyPassword = NULL, bool freeAfterHandshake = false);
+
+	/**
+	* @brief Sets private key, certificate and password from memory for the SSL connection
+	* 	 	 If this methods is called from a client then it sets the client key and certificate
+	* 		 If it is called from a server then it sets the server certificate and key.
+	* 		 Server and Client certificates differ. Client certificate is used for identification.
+	* 		 Server certificate is used for encrypt/decrypt the data.
+	* 		 Make sure to use the correct certificate for the desired goal.
+	*
+	* @note  This method passes the certificate key chain by reference
+	*
+	* @param SSLKeyCertPair
+	* @param bool freeAfterHandshake
+	*
+	* @return bool  true of success, false or failure
+	*/
+	bool setSslKeyCert(SSLKeyCertPair keyCert, bool freeAfterHandshake = false);
+
+	/**
+	 * @brief Frees the memory used for the key and certificate pair
+	 */
+	void freeSslKeyCert();
 
 	SSL* getSsl();
 #endif
@@ -206,6 +219,9 @@ protected:
 	virtual err_t onPoll();
 	virtual void onError(err_t err);
 	virtual void onReadyToSendData(TcpConnectionEvent sourceEvent);
+#ifdef ENABLE_SSL
+	virtual err_t onSslConnected(SSL *ssl);
+#endif
 
 	static err_t staticOnConnected(void *arg, tcp_pcb *tcp, err_t err);
 	static err_t staticOnReceive(void *arg, tcp_pcb *tcp, pbuf *p, err_t err);
@@ -232,12 +248,9 @@ protected:
 	SSL_EXTENSIONS *sslExtension=NULL;
 	bool sslConnected = false;
 	uint32_t sslOptions=0;
-	SSLKeyCertPair clientKeyCert;
-	bool freeClientKeyCert = false;
+	SSLKeyCertPair sslKeyCert;
+	bool freeKeyCert = false;
 	SSLSessionId* sslSessionId = NULL;
-
-	Vector<SslValidatorCallback> sslValidators;
-	Vector<void *> sslValidatorsData;
 #endif
 	bool useSsl = false;
 
