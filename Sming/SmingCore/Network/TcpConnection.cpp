@@ -31,12 +31,6 @@ TcpConnection::~TcpConnection()
 	close();
 
 #ifdef ENABLE_SSL
-	if(sslFingerprint.certSha1) {
-		delete[] sslFingerprint.certSha1;
-	}
-	if(sslFingerprint.pkSha256) {
-		delete[] sslFingerprint.pkSha256;
-	}
 	freeSslClientKeyCert();
 #endif
 	debug_d("~TCP connection");
@@ -561,26 +555,15 @@ err_t TcpConnection::staticOnReceive(void *arg, tcp_pcb *tcp, pbuf *p, err_t err
 				System.setCpuFrequency(eCF_80MHz); // Preserve some CPU cycles
 #endif
 
-				bool hasError = false;
-				do {
-					if(con->sslFingerprint.certSha1 && ssl_match_fingerprint(con->ssl, con->sslFingerprint.certSha1) != SSL_OK) {
-						debug_d("SSL: Certificate fingerprint does not match!");
-						hasError = true;
+				bool hasSuccess = (con->sslValidators.count() == 0);
+				for(int i=0; i< con->sslValidators.count(); i++) {
+					if(con->sslValidators[i](con->ssl, con->sslValidatorsData[i])) {
+						hasSuccess = true;
 						break;
 					}
-
-					if(con->sslFingerprint.pkSha256 && ssl_match_spki_sha256(con->ssl, con->sslFingerprint.pkSha256) != SSL_OK) {
-						debug_d("SSL: Certificate PK fingerprint does not match!");
-						hasError = true;
-						break;
-					}
-				} while(0);
-
-				if(con->freeFingerprints) {
-					con->freeSslFingerprints();
 				}
 
-				if(hasError) {
+				if(!hasSuccess) {
 					con->close();
 					closeTcpConnection(tcp);
 
@@ -712,58 +695,48 @@ void TcpConnection::addSslOptions(uint32_t sslOptions)
 	this->sslOptions |= sslOptions;
 }
 
-bool TcpConnection::pinCertificate(const uint8_t *fingerprint, SslFingerprintType type, bool freeAfterHandshake /* = false */)
+void TcpConnection::addSslValidator(SslValidatorCallback callback, void* data /* = NULL */)
 {
-	int length = 0;
-	uint8_t *localStore;
+	sslValidators.addElement(callback);
+	sslValidatorsData.addElement(data);
+}
 
+bool TcpConnection::pinCertificate(const uint8_t *fingerprint, SslFingerprintType type)
+{
+	SslValidatorCallback callback = nullptr;
 	switch(type) {
 	case eSFT_CertSha1:
-		localStore = sslFingerprint.certSha1;
-		length = SHA1_SIZE;
+		callback = sslValidateCertificateSha1;
 		break;
 	case eSFT_PkSha256:
-		localStore = sslFingerprint.pkSha256;
-		length = SHA256_SIZE;
+		callback = sslValidatePublicKeySha256;
 		break;
 	default:
 		debug_d("Unsupported SSL certificate fingerprint type");
 	}
 
-	if(!length) {
+	if(!callback) {
+		delete[] fingerprint;
 		return false;
 	}
 
-	freeFingerprints = freeAfterHandshake;
-
-	if(localStore) {
-		delete[] localStore;
-	}
-	localStore = new uint8_t[length];
-	if(localStore == NULL) {
-		return false;
-	}
-
-	memcpy(localStore, fingerprint, length);
-
-	switch(type) {
-		case eSFT_CertSha1:
-			sslFingerprint.certSha1 = localStore;
-			break;
-		case eSFT_PkSha256:
-			sslFingerprint.pkSha256 = localStore;
-			break;
-	}
-
+	addSslValidator(callback, (void *)fingerprint);
 
 	return true;
 }
 
-bool TcpConnection::pinCertificate(SSLFingerprints fingerprints, bool freeAfterHandshake /* = false */)
+bool TcpConnection::pinCertificate(SSLFingerprints fingerprints)
 {
-	sslFingerprint = fingerprints;
-	freeFingerprints = freeAfterHandshake;
-	return true;
+	bool success = false;
+	if(fingerprints.certSha1 != NULL) {
+		success = pinCertificate(fingerprints.certSha1, eSFT_CertSha1);
+	}
+
+	if(fingerprints.pkSha256 != NULL) {
+		success = pinCertificate(fingerprints.pkSha256, eSFT_PkSha256);
+	}
+
+	return success;
 }
 
 bool TcpConnection::setSslClientKeyCert(const uint8_t *key, int keyLength,
@@ -824,18 +797,6 @@ void TcpConnection::freeSslClientKeyCert()
 
 	clientKeyCert.keyLength = 0;
 	clientKeyCert.certificateLength = 0;
-}
-
-void TcpConnection::freeSslFingerprints()
-{
-	if(sslFingerprint.certSha1) {
-		delete[] sslFingerprint.certSha1;
-		sslFingerprint.certSha1 = NULL;
-	}
-	if(sslFingerprint.pkSha256) {
-		delete[] sslFingerprint.pkSha256;
-		sslFingerprint.pkSha256 = NULL;
-	}
 }
 
 SSL* TcpConnection::getSsl() {

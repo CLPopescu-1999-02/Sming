@@ -16,6 +16,7 @@
 #ifdef ENABLE_SSL
 #include "../../axtls-8266/compat/lwipr_compat.h"
 #include "../Clock.h"
+#include "SslValidator.h"
 #endif
 
 #include "../Wiring/WiringFrameworkDependencies.h"
@@ -113,18 +114,14 @@ public:
 	void addSslOptions(uint32_t sslOptions);
 
 	/**
-	 * @brief Sets the SHA1 certificate finger print.
-	 * 		  The latter will be used after successful handshake to check against the fingerprint of the other side.
+	 * @brief Allows setting of multiple SSL validators after a successful handshake
+	 * @param SslValidatorCallback callback
+	 * @param void* data - The data that should be passed to the callback.
+	 * 					   The callback will cast the data to the correct type and take care
+	 * 					   to delete it.
 	 *
-	 * @deprecated This method will be removed in future releases. Use pinCertificate instead.
-	 *
-	 * @param const uint8_t *data
-	 * @param int length
-	 * @return bool  true of success, false or failure
 	 */
-	__forceinline bool setSslFingerprint(const uint8_t *data, int length = SHA1_SIZE) {
-		return pinCertificate(data, eSFT_CertSha1);
-	}
+	void addSslValidator(SslValidatorCallback callback, void* data = NULL);
 
 	/**
 	 * @brief   Requires(pins) the remote SSL certificate to match certain fingerprints
@@ -133,7 +130,9 @@ public:
 	 * 		    Subject Public Key Info (which usually only changes when the public key changes)
 	 * 		    is used rather than the SHA-1 hash of the entire certificate
 	 * 		    (which will change on each certificate renewal).
-	 * @param const uint8_t *finterprint - the fingeprint data agains which the match should be perfomed
+	 * @param const uint8_t *finterprint - the fingeprint data against which the match should be performed
+	 * 									   The fingerprint will be deleted after use and should
+	 * 									   not be reused outside of this method
 	 * @param SslFingerprintType type - the fingerprint type
 	 * @note    Type: eSFT_PkSha256
 	 * 			For HTTP public key pinning (RFC7469), the SHA-256 hash of the
@@ -145,9 +144,10 @@ public:
 	 * @note    Type: eSFT_CertSha1
 	 * 			The SHA1 hash of the remote certificate will be calculated and compared with the given one.
 	 * 			Disadvantages: The hash needs to be updated every time the remote server updates its certificate
+	 *
 	 * @return bool  true of success, false or failure
 	 */
-	bool pinCertificate(const uint8_t *fingerprint, SslFingerprintType type, bool freeAfterHandshake = false);
+	bool pinCertificate(const uint8_t *fingerprint, SslFingerprintType type);
 
 	/**
 	 * @brief   Requires(pins) the remote SSL certificate to match certain fingerprints
@@ -158,7 +158,7 @@ public:
 	 *
 	 * @return bool  true of success, false or failure
 	 */
-	bool pinCertificate(SSLFingerprints fingerprints, bool freeAfterHandshake = false);
+	bool pinCertificate(SSLFingerprints fingerprints);
 
 	/**
 	 * @brief Sets client private key, certificate and password from memory
@@ -195,11 +195,6 @@ public:
 	 */
 	void freeSslClientKeyCert();
 
-	/**
-	 * @brief Frees the memory used for SSL fingerprinting
-	 */
-	void freeSslFingerprints();
-
 	SSL* getSsl();
 #endif
 
@@ -235,13 +230,14 @@ protected:
 	SSL *ssl = nullptr;
 	SSLCTX *sslContext = nullptr;
 	SSL_EXTENSIONS *sslExtension=NULL;
-	SSLFingerprints sslFingerprint;
 	bool sslConnected = false;
 	uint32_t sslOptions=0;
 	SSLKeyCertPair clientKeyCert;
 	bool freeClientKeyCert = false;
-	bool freeFingerprints = false;
 	SSLSessionId* sslSessionId = NULL;
+
+	Vector<SslValidatorCallback> sslValidators;
+	Vector<void *> sslValidatorsData;
 #endif
 	bool useSsl = false;
 
