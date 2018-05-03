@@ -467,9 +467,13 @@ REENTER:
 
 void HttpConnection::sendRequestHeaders(HttpRequest* request)
 {
-	sendString(http_method_str(request->method) + String(" ") + request->uri.getPathWithQuery() + " HTTP/1.1\r\nHost: " + request->uri.Host + "\r\n");
+	sendString(http_method_str(request->method) + String(" ") + request->uri.getPathWithQuery() + " HTTP/1.1\r\n");
 
-	request->headers["Content-Length"] = 0;
+	if(!request->headers.contains("Host")) {
+		request->headers["Host"] = request->uri.Host;
+	}
+
+	request->headers["Content-Length"] = "0";
 	if (request->files.count()) {
 		MultipartStream* mStream = new MultipartStream(
 				HttpPartProducerDelegate(&HttpConnection::multipartProducer,
