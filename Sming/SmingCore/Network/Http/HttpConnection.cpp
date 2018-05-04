@@ -99,7 +99,7 @@ bool HttpConnection::isActive()
 }
 
 // @deprecated
-HashMap<String, String> &HttpConnection::getResponseHeaders()
+HttpHeaders &HttpConnection::getResponseHeaders()
 {
 	return responseHeaders;
 }

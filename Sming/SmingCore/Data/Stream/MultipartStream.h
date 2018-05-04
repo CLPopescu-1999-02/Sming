@@ -13,8 +13,7 @@
 
 #include "../../DataSourceStream.h"
 #include "Delegate.h"
-
-typedef HashMap<String, String> HttpHeaders;
+#include "../Structures.h"
 
 /**
  * @brief      Multipart stream class

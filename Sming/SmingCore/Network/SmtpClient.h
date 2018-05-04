@@ -32,9 +32,7 @@
 #include "../../Wiring/WVector.h"
 #include "../DataSourceStream.h"
 #include "WebConstants.h"
-
-// TODO: Move the simpleConcurrentQueue to a better place
-#include "Http/HttpCommon.h"
+#include "../Data/Structures.h"
 
 #include <functional>
 
@@ -91,7 +89,6 @@ enum SmtpState
 
 class SmtpClient;
 
-typedef HashMap<String, String> HttpHeaders;
 typedef std::function<int(SmtpClient& client, int code, char* status)> SmtpClientCallback;
 
 class SmtpClient : protected TcpClient
