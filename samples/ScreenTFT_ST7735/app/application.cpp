@@ -228,28 +228,28 @@ void screen12() {
 	startTime = millis();
 	bmpDraw(tft, "sming.bmp", 0, 0);
 	debugf("screen12: bmpDraw %d ms", millis() - startTime);
-//	DemoScreenTimer.initializeMs(2000, screen13).start(FALSE);
+//	DemoScreenTimer.initializeMs(2000, screen13).start(false);
 }
 
 void screen11() {
 	startTime = millis();
 	mediabuttons();
 	debugf("screen11: mediabuttons %d ms", millis() - startTime);
-	DemoScreenTimer.initializeMs(1000, screen12).start(FALSE);
+	DemoScreenTimer.initializeMs(1000, screen12).start(false);
 }
 
 void screen10() {
 	startTime = millis();
 	testtriangles();
 	debugf("screen10: testtriangles %d ms", millis() - startTime);
-	DemoScreenTimer.initializeMs(1000, screen11).start(FALSE);
+	DemoScreenTimer.initializeMs(1000, screen11).start(false);
 }
 
 void screen9() {
 	startTime = millis();
 	testroundrects();
 	debugf("screen9: testroundrects %d ms", millis() - startTime);
-	DemoScreenTimer.initializeMs(1000, screen10).start(FALSE);
+	DemoScreenTimer.initializeMs(1000, screen10).start(false);
 }
 
 void screen8() {
@@ -258,21 +258,21 @@ void screen8() {
 	testfillcircles(10, ST7735_BLUE);
 	testdrawcircles(10, ST7735_WHITE);
 	debugf("screen8: testfillcircles %d ms", millis() - startTime);
-	DemoScreenTimer.initializeMs(1000, screen9).start(FALSE);
+	DemoScreenTimer.initializeMs(1000, screen9).start(false);
 }
 
 void screen7() {
 	startTime = millis();
 	testfillrects(ST7735_YELLOW, ST7735_MAGENTA);
 	debugf("screen7: testfillrects %d ms", millis() - startTime);
-	DemoScreenTimer.initializeMs(1000, screen8).start(FALSE);
+	DemoScreenTimer.initializeMs(1000, screen8).start(false);
 }
 
 void screen6() {
 	startTime = millis();
 	testdrawrects(ST7735_GREEN);
 	debugf("screen6: testdrawrects %d ms", millis() - startTime);
-	DemoScreenTimer.initializeMs(1000, screen7).start(FALSE);
+	DemoScreenTimer.initializeMs(1000, screen7).start(false);
 }
 
 void screen5() {
@@ -280,7 +280,7 @@ void screen5() {
 	  // optimized lines
 	testfastlines(ST7735_RED, ST7735_BLUE);
 	debugf("screen5: testfastlines %d ms", millis() - startTime);
-	DemoScreenTimer.initializeMs(1000, screen6).start(FALSE);
+	DemoScreenTimer.initializeMs(1000, screen6).start(false);
 }
 
 void screen4() {
@@ -288,21 +288,21 @@ void screen4() {
 	// line draw test
 	testlines(ST7735_YELLOW);
 	debugf("screen4: testlines %d ms", millis() - startTime);
-	DemoScreenTimer.initializeMs(1000, screen5).start(FALSE);
+	DemoScreenTimer.initializeMs(1000, screen5).start(false);
 }
 
 void screen3() {
 	startTime = millis();
 	tftPrintTest2();
 	debugf("screen3: tftPrintTest2 %d ms", millis() - startTime);
-	DemoScreenTimer.initializeMs(1000, screen4).start(FALSE);
+	DemoScreenTimer.initializeMs(1000, screen4).start(false);
 }
 
 void screen2() {
 	startTime = millis();
 	tftPrintTest1();
 	debugf("screen2: tftPrintTest1 %d ms", millis() - startTime);
-	DemoScreenTimer.initializeMs(1000, screen3).start(FALSE);
+	DemoScreenTimer.initializeMs(1000, screen3).start(false);
 }
 
 void screen1() {
@@ -311,7 +311,7 @@ void screen1() {
     tft.fillScreen(ST7735_BLACK);
     testdrawtext("Lorem ipsum dolor sit amet, consectetur adipiscing elit. Curabitur adipiscing ante sed nibh tincidunt feugiat. Maecenas enim massa, fringilla sed malesuada et, malesuada sit amet turpis. Sed porttitor neque ut ante pretium vitae malesuada nunc bibendum. Nullam aliquet ultrices massa eu hendrerit. Ut sed nisi lorem. In vestibulum purus a tortor imperdiet posuere. ", ST7735_WHITE);
 	debugf("screen1: testdrawtext %d ms", millis() - startTime);
-	DemoScreenTimer.initializeMs(1000, screen2).start(FALSE);
+	DemoScreenTimer.initializeMs(1000, screen2).start(false);
 }
 
 void init()
@@ -339,6 +339,6 @@ void init()
 
 	debugf("Initialized in %d ms\n", startTime);
 
-	DemoScreenTimer.initializeMs(500, screen1).start(FALSE);
+	DemoScreenTimer.initializeMs(500, screen1).start(false);
 
 }

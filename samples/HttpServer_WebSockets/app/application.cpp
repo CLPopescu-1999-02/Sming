@@ -37,7 +37,7 @@ void onFile(HttpRequest &request, HttpResponse &response)
 	}
 }
 
-void wsConnected(WebSocketConnection& socket)
+void wsConnected(WebsocketConnection& socket)
 {
 	totalActiveSockets++;
 
@@ -49,7 +49,7 @@ void wsConnected(WebSocketConnection& socket)
 	socket.broadcast(message.c_str(), message.length());
 }
 
-void wsMessageReceived(WebSocketConnection& socket, const String& message)
+void wsMessageReceived(WebsocketConnection& socket, const String& message)
 {
 	Serial.printf("WebSocket message received:\r\n%s\r\n", message.c_str());
 
@@ -71,12 +71,12 @@ void wsMessageReceived(WebSocketConnection& socket, const String& message)
     }
 }
 
-void wsBinaryReceived(WebSocketConnection& socket, uint8_t* data, size_t size)
+void wsBinaryReceived(WebsocketConnection& socket, uint8_t* data, size_t size)
 {
 	Serial.printf("Websocket binary data recieved, size: %d\r\n", size);
 }
 
-void wsDisconnected(WebSocketConnection& socket)
+void wsDisconnected(WebsocketConnection& socket)
 {
 	totalActiveSockets--;
 

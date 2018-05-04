@@ -10,13 +10,13 @@ CUserData::~CUserData()
 	logOut();
 }
 
-void CUserData::addSession(WebSocketConnection& connection)
+void CUserData::addSession(WebsocketConnection& connection)
 {
 	activeWebSockets.addElement(&connection);
 	connection.setUserData((void*)this);
 }
 
-void CUserData::removeSession(WebSocketConnection& connection)
+void CUserData::removeSession(WebsocketConnection& connection)
 {
 	for(int i=0; i < activeWebSockets.count(); i++)
 	{
@@ -30,7 +30,7 @@ void CUserData::removeSession(WebSocketConnection& connection)
 	}
 }
 
-void CUserData::printMessage(WebSocketConnection& connection,const String &msg)
+void CUserData::printMessage(WebsocketConnection& connection,const String &msg)
 {
 	int i=0;
 	for(; i < activeWebSockets.count(); i++)

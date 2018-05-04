@@ -77,6 +77,11 @@ bool HttpConnection::connect(const String& host, int port, bool useSsl /* = fals
 	return TcpClient::connect(host, port, useSsl, sslOptions);
 }
 
+bool HttpConnection::send(HttpRequest* request)
+{
+	return waitingQueue->enqueue(request);
+}
+
 bool HttpConnection::isActive()
 {
 	if(tcp == NULL) {

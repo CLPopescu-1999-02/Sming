@@ -40,7 +40,7 @@ public:
 
 	bool connect(const String& host, int port, bool useSsl = false, uint32_t sslOptions = 0);
 
-	void send(HttpRequest* request);
+	bool send(HttpRequest* request);
 
 	bool isActive();
 
@@ -75,8 +75,6 @@ public:
 
 	String getResponseString();
 	// @enddeprecated
-
-
 
 protected:
 	void reset();

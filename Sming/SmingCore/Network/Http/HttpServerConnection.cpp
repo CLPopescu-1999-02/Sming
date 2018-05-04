@@ -14,7 +14,6 @@
 
 #include "HttpServer.h"
 #include "TcpServer.h"
-#include "../../Services/cWebsocket/websocket.h"
 #include "WebConstants.h"
 #include "../../Data/Stream/ChunkedStream.h"
 
