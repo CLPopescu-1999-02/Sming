@@ -73,6 +73,17 @@ public:
 	//Use base class documentation
 	virtual bool isFinished();
 
+	/**
+	 * @brief A method that backs up the current state
+	 *
+	 */
+	virtual void saveState() {};
+
+	/**
+	 * @brief A method that restores the last backed up state
+	 */
+	virtual void restoreState() {};
+
 protected:
 	StreamTransformerCallback transformCallback = nullptr;
 

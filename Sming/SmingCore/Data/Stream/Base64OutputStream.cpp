@@ -11,7 +11,7 @@
 #include "Base64OutputStream.h"
 
 Base64OutputStream::Base64OutputStream(ReadWriteStream *stream, size_t resultSize /* = 512 */):
-							  StreamTransformer(stream, nullptr, resultSize, (resultSize - resultSize * 0.25))
+							  StreamTransformer(stream, nullptr, resultSize, (resultSize /4 ))
 
 {
 	base64_init_encodestate(&state);
@@ -35,4 +35,14 @@ int Base64OutputStream::encode(uint8_t* source, size_t sourceLength,
 	}
 
 	return count;
+}
+
+void Base64OutputStream::saveState()
+{
+	memcpy(&lastState, &state, sizeof(base64_encodestate));
+}
+
+void Base64OutputStream::restoreState()
+{
+	memcpy(&state, &lastState, sizeof(base64_encodestate));
 }

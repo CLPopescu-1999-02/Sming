@@ -67,8 +67,16 @@ uint16_t StreamTransformer::readMemoryBlock(char* data, int bufSize)
 				break;
 			}
 
+			saveState();
 			int outLength = transformCallback((uint8_t*)data, len, result, resultSize);
+			if(outLength > tempStream->room()) {
+				restoreState();
+				break;
+			}
+
 			if( tempStream->write(result, outLength) != outLength) {
+				debug_e("That should not happen!");
+				restoreState();
 				break;
 			}
 

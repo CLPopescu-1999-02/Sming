@@ -46,6 +46,8 @@ bool WebsocketConnection::initialize(HttpServerConnection& connection, HttpReque
 
 	connection.userData = (void *)this;
 
+	serverConnection = &connection;
+
 	memset(&parserSettings, 0, sizeof(parserSettings));
 	parserSettings.on_data_begin = staticOnDataBegin;
 	parserSettings.on_data_payload = staticOnDataPayload;
@@ -280,6 +282,12 @@ void WebsocketConnection::close()
 		if(wsDisconnect) {
 			wsDisconnect(*this);
 		}
+	}
+
+	// TODO: Move this to a better place
+	if(!isClientConnection && serverConnection != nullptr) {
+		serverConnection->setTimeOut(1);
+		serverConnection = nullptr;
 	}
 }
 

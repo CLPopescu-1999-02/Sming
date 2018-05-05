@@ -44,8 +44,19 @@ public:
 	 */
 	int encode(uint8_t* source, size_t sourceLength, uint8_t* target, size_t targetLength);
 
+	/**
+	 * @brief A method that backs up the current state
+	 */
+	virtual void saveState();
+
+	/**
+	 * @brief A method that restores the last backed up state
+	 */
+	virtual void restoreState();
+
 private:
 	base64_encodestate state;
+	base64_encodestate lastState;
 };
 
 /** @} */

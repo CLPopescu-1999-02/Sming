@@ -111,6 +111,8 @@ private:
 	static WebSocketsList websocketList;
 
 	bool isClientConnection = true;
+
+	HttpServerConnection* serverConnection = nullptr;
 };
 
 #endif /* SMINGCORE_NETWORK_WEBSOCKETCONNECTION_H_ */
