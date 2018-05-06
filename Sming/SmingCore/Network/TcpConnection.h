@@ -245,7 +245,7 @@ protected:
 #ifdef ENABLE_SSL
 	SSL *ssl = nullptr;
 	SSLCTX *sslContext = nullptr;
-	SSL_EXTENSIONS *sslExtension=NULL;
+	SSL_EXTENSIONS *sslExtension=nullptr;
 	bool sslConnected = false;
 	uint32_t sslOptions=0;
 	SSLKeyCertPair sslKeyCert;
@@ -256,6 +256,10 @@ protected:
 
 private:
 	TcpConnectionDestroyedDelegate destroyedDelegate = 0;
+
+#ifdef ENABLE_SSL
+	void closeSsl();
+#endif
 };
 
 /** @} */

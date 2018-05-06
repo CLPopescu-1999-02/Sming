@@ -157,13 +157,7 @@ err_t TcpConnection::onConnected(err_t err)
 void TcpConnection::onError(err_t err)
 {
 #ifdef ENABLE_SSL
-	if(ssl) {
-		sslConnected = false;
-		ssl_ctx_free(sslContext);
-		sslContext=nullptr;
-		sslExtension = NULL;
-		ssl=nullptr;
-	}
+	closeSsl();
 #endif
 	debug_d("TCP connection error: %d", err);
 }
@@ -296,14 +290,7 @@ int TcpConnection::write(IDataSourceStream* stream)
 void TcpConnection::close()
 {
 #ifdef ENABLE_SSL
-	if (ssl != nullptr) {
-		debug_d("SSL: closing ...");
-		ssl_ctx_free(sslContext);
-		sslContext=nullptr;
-		ssl=nullptr;
-		sslConnected = false;
-		debug_d("done\n");
-	}
+	closeSsl();
 #endif
 
 	if (tcp == NULL) return;
@@ -753,7 +740,22 @@ void TcpConnection::freeSslKeyCert()
 	sslKeyCert.certificateLength = 0;
 }
 
-SSL* TcpConnection::getSsl() {
+SSL* TcpConnection::getSsl()
+{
 	return ssl;
+}
+
+void TcpConnection::closeSsl()
+{
+	if (ssl == nullptr) {
+		return;
+	}
+
+	debug_d("SSL: closing ...");
+	ssl_ctx_free(sslContext);
+	sslContext   = nullptr;
+	sslExtension = nullptr;
+	ssl          = nullptr;
+	sslConnected = false;
 }
 #endif

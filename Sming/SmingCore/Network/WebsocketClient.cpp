@@ -139,27 +139,24 @@ err_t WebsocketClient::onProtocolUpgrade(http_parser* parser)
 
 err_t WebsocketClient::onReceive(pbuf* buf)
 {
-	if (buf == NULL) {
-		// Disconnected, close it
+	if (buf == NULL || state == WS_STATE_OPENING) {
 		return HttpConnection::onReceive(buf);
 	}
 
-	if(state == WS_STATE_NORMAL) {
-		pbuf *cur = buf;
-		int parsedBytes = 0;
-		while (cur != nullptr && cur->len > 0) {
-			int err = ws_parser_execute(&parser, (char*) cur->payload, cur->len);
-			if(err) {
-				debug_e("WsClient: Got error: %s", ws_parser_error(err));
-				TcpClient::onReceive(nullptr);
+	pbuf *cur = buf;
+	int parsedBytes = 0;
+	while (cur != nullptr && cur->len > 0) {
+		int err = ws_parser_execute(&parser, (char*) cur->payload, cur->len);
+		if(err) {
+			debug_e("WsClient: Got error: %s", ws_parser_error(err));
+			TcpClient::onReceive(nullptr);
 
-				return ERR_ABRT;
-			}
-			cur = cur->next;
+			return ERR_ABRT;
 		}
+		cur = cur->next;
 	}
 
-	HttpConnection::onReceive(buf);
+	TcpClient::onReceive(buf);
 
 	return ERR_OK;
 }
